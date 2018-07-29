@@ -9,7 +9,7 @@
 
 using namespace std;
 
-void adjustFrameSizeParams(Config conf, FrameHandler& fh);
+void adjustFrameSizeParams(Config& conf, FrameHandler& fh);
 bool openCapSource(Config& conf, FrameHandler& fh);
 
 
@@ -26,8 +26,8 @@ int main(int argc, const char* argv[]) {
     const char* av[] = {
         argv[0],
         "-i",
-        //"traffic640x480.avi" };
-        (char*)"traffic320x240.avi" };
+        "traffic640x480.avi" };
+        //"traffic320x240.avi" };
 
 	int ac = sizeof(av) / sizeof(av[0]);
 
@@ -134,7 +134,7 @@ int main(int argc, const char* argv[]) {
 }
 
 
-void adjustFrameSizeParams(Config conf, FrameHandler& fh) {
+void adjustFrameSizeParams(Config& conf, FrameHandler& fh) {
 	int widthNew = static_cast<int>(fh.getFrameSize().width);
 	int heightNew = static_cast<int>(fh.getFrameSize().height);
 	int widthActual = stoi(conf.getParam("frame_size_x"));

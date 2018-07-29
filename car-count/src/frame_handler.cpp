@@ -606,7 +606,7 @@ bool FrameHandler::initFileReader(std::string videoFilePath) {
     //	m_frameSize.width = m_capture.get(CV_CAP_PROP_FRAME_WIDTH);
     //  m_frameSize.height = m_capture.get(CV_CAP_PROP_FRAME_HEIGHT);
     //
-    cv::Size m_frameSize = firstFrame.size();
+    m_frameSize = firstFrame.size();
 
 	if (m_frameSize.height == 0 || m_frameSize.width == 0) {
 		cerr << "initFileReader: wrong cam resolution" << endl;
