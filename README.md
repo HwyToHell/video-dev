@@ -14,17 +14,17 @@
    |  
    |-car-count (TODO.md)  
    |  |-include  
-   |  |-src
-   |  |-msvc-car-count (windows, visual studio 10) 
-   |  |  (msvc-car-count.sln, build directories, ...)
-   |  |-qtcr-car-count (linux x64, gcc)
-   |  |-raspi-car-count (cross x64 -> arm, gcc toolchain)
-   |
-   |-car-count-test (test cases for car-count)
-   |
-   |-cnn (experimental classification with neural networks)
-   |
-   |-cpp (developmental private libs, used in above projects)
+   |  |-src  
+   |  |-msvc-car-count (windows, visual studio 10)   
+   |  |  (msvc-car-count.sln, build directories, ...)  
+   |  |-qtcr-car-count (linux x64, gcc)  
+   |  |-raspi-car-count (cross x64 -> arm, gcc toolchain)  
+   |  
+   |-car-count-test (test cases for car-count)  
+   |  
+   |-cnn (experimental classification with neural networks)  
+   |  
+   |-cpp (developmental private libs, used in above projects)  
    
 # TODO
 msvc: change includes: #include "../../car-count/include/config.h"
