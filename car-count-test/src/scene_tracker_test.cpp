@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "../car-count/include/config.h" // includes tracker.h
+#include "../../car-count/include/config.h" // includes tracker.h
 
 using namespace std;
 using namespace cv;

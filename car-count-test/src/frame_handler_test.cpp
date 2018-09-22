@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include <fstream>
-#include "../car-count/include/frame_handler.h"
+#include "../../car-count/include/frame_handler.h"
 
 using namespace std;
 
@@ -171,20 +171,33 @@ SCENARIO("#frm004 FrameHandler::initCam, initFileReader, getFrameSize", "[Frame]
 		}
 */
         #if defined (_WIN32)
-        string videoFilePath("D:\\Users\\Holger\\counter\\traffic320x240.avi");
+        string videoFilePath320("D:\\Users\\Holger\\counter\\traffic320x240.avi");
+        string videoFilePath640("D:\\Users\\Holger\\counter\\traffic640x480.avi");
         #elif defined (__linux__)
-        string videoFilePath("/home/holger/counter/traffic320x240.avi");
+        string videoFilePath320("/home/holger/counter/traffic320x240.avi");
+        string videoFilePath640("/home/holger/counter/traffic640x480.avi");
         #endif
 
-		REQUIRE(isFileExist(videoFilePath));
-
-		WHEN("file reader is initialized with valid video file") {
-			REQUIRE(true == frameHandler.initFileReader(videoFilePath));
-			THEN("frame size is 320 x 240") {
+        REQUIRE(isFileExist(videoFilePath640));
+        WHEN("file reader is initialized with traffic640x480.avi") {
+            REQUIRE(true == frameHandler.initFileReader(videoFilePath640));
+            THEN("frame size is 640 x 480") {
 				cv::Size2d frameSize = frameHandler.getFrameSize();
-				REQUIRE(frameSize.width == 320);
-				REQUIRE(frameSize.height == 240);
+                REQUIRE(frameSize.width == 640);
+                REQUIRE(frameSize.height == 480);
 			}
 		}
+
+        REQUIRE(isFileExist(videoFilePath320));
+        WHEN("file reader is initialized with traffic320x240.avi") {
+            REQUIRE(true == frameHandler.initFileReader(videoFilePath320));
+            THEN("frame size is 320 x 240") {
+                cv::Size2d frameSize = frameHandler.getFrameSize();
+                REQUIRE(frameSize.width == 320);
+                REQUIRE(frameSize.height == 240);
+            }
+        }
+
+
 	}
 }

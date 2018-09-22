@@ -2,8 +2,8 @@
 #include <cstdio> // rand(), remove()
 #include <map>
 
-#include "../car-count/include/config.h" // includes tracker.h
-#include "../cpp/inc/program_options.h"
+#include "../../car-count/include/config.h" // includes tracker.h
+#include "../../cpp/inc/program_options.h"
 
 #if defined (_WIN32)
 #pragma warning(disable: 4996)
