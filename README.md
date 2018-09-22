@@ -1,24 +1,24 @@
+# CarCount Application
 
-# H1 CarCount Application
-========================================================================
+-----------------------
 
-# Car counter using opencv
+### Car counter using opencv
 - processes web cam input
 - segments motion
 - tracks observations and counts cars
 - simple classification (length, height)
 - experimental: using neural networks (cnn)
 
-# Directory tree
+### Directory tree
 - video-dev (.git, README.md)  
    |  
    |-car-count (TODO.md)  
-   |  |-include  
-   |  |-src  
-   |  |-msvc-car-count (windows, visual studio 10)   
-   |  |  (msvc-car-count.sln, build directories, ...)  
-   |  |-qtcr-car-count (linux x64, gcc)  
-   |  |-raspi-car-count (cross x64 -> arm, gcc toolchain)  
+   |	|-include  
+   | 	|-src  
+   |  	|-msvc-car-count (windows, visual studio 10)   
+   |  	|  (msvc-car-count.sln, build directories, ...)  
+   |  	|-qtcr-car-count (linux x64, gcc)  
+   |  	|-raspi-car-count (cross x64 -> arm, gcc toolchain)  
    |  
    |-car-count-test (test cases for car-count)  
    |  
@@ -26,12 +26,12 @@
    |  
    |-cpp (developmental private libs, used in above projects)  
    
-# TODO
+### TODO
 msvc: change includes: #include "../../car-count/include/config.h"
 instead of: #include "../car-count/include/config.h"
 and set project location accordingly
 
-# Change history
+### Change history
 [2018-09-22]
 - separated code directory from IDE project directory
 
