@@ -10,10 +10,10 @@
 - experimental: using neural networks (cnn)
 
 # Directory tree
-- video-dev (.git, README.md)
+- video-dev (.git, README.md)  
    |  
-   |-car-count (TODO.md)
-   |  |-include
+   |-car-count (TODO.md)  
+   |  |-include  
    |  |-src
    |  |-msvc-car-count (windows, visual studio 10) 
    |  |  (msvc-car-count.sln, build directories, ...)
