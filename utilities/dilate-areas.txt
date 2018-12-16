@@ -1,0 +1,17 @@
+dilate 21x21
+1x1 -> 21x21, area: 441
+2x2 -> 22x22, area: 484
+3x2 -> 23x22, area: 506
+3x3 -> 23x23, area: 526
+5x4 -> 25x24, area: 600
+5x5 -> 25x25, area: 625
+6x6 -> 26x26, area: 676
+7x6 -> 27x26, area: 702
+
+dilate 11x11
+1x1 -> 11x11, area: 121
+3x3 -> 13x13, area: 169
+4x4 -> 14x14, area: 196
+5x5 -> 15x15, area: 225
+6x6 -> 16x16, area: 256
+7x6 -> 17x16, area: 272

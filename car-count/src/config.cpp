@@ -225,8 +225,8 @@ bool Config::populateStdParams() {
 	// region of interest
 	m_paramList.push_back(Parameter("roi_x", "int", "80"));
 	m_paramList.push_back(Parameter("roi_y", "int", "80"));
-	m_paramList.push_back(Parameter("roi_width", "int", "180"));
-	m_paramList.push_back(Parameter("roi_height", "int", "80"));
+	m_paramList.push_back(Parameter("roi_width", "int", "200"));
+	m_paramList.push_back(Parameter("roi_height", "int", "200"));
 	// blob assignment
 	m_paramList.push_back(Parameter("blob_area_min", "int", "200"));
 	m_paramList.push_back(Parameter("blob_area_max", "int", "20000"));
@@ -679,8 +679,13 @@ bool makeDir(const std::string& dir) {
 		DWORD error = GetLastError();
 		if (GetLastError() == ERROR_ALREADY_EXISTS)
 			return true;
-		else 
+		else {
+			if (GetLastError() == ERROR_INVALID_NAME)
+				std::cerr << "makeDir: invalid directory name: " << dir << std::endl;
+			else
+				std::cerr << "makeDir: last error code: " << GetLastError() << std::endl;
 			return false;
+		}
 	#elif defined (__linux__)
         // TODO use mkdir from <sys/stat.h>
         mode_t permission = S_IRWXU | S_IRWXG | S_IRWXO;

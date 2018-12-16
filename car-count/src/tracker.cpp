@@ -20,21 +20,21 @@ double round(double number) // not necessary in C++11
 //////////////////////////////////////////////////////////////////////////////
 
 TrackEntry::TrackEntry(int x, int y, int width, int height) {
-	mBbox.x = abs(x);
-	mBbox.y = abs(y);
-	mBbox.width = abs(width);
-	mBbox.height = abs(height);
-	mCentroid.x = mBbox.x + (mBbox.width / 2);
-	mCentroid.y = mBbox.y + (mBbox.height / 2);
+	m_bbox.x = abs(x);
+	m_bbox.y = abs(y);
+	m_bbox.width = abs(width);
+	m_bbox.height = abs(height);
+	m_centroid.x = m_bbox.x + (m_bbox.width / 2);
+	m_centroid.y = m_bbox.y + (m_bbox.height / 2);
 }
 
-TrackEntry::TrackEntry(cv::Rect _bbox) : mBbox(_bbox) {
-	mCentroid.x = mBbox.x + (mBbox.width / 2);
-	mCentroid.y = mBbox.y + (mBbox.height / 2);
+TrackEntry::TrackEntry(cv::Rect rect) : m_bbox(rect) {
+	m_centroid.x = m_bbox.x + (m_bbox.width / 2);
+	m_centroid.y = m_bbox.y + (m_bbox.height / 2);
 }
 
 cv::Point2i TrackEntry::centroid() const {
-	return mCentroid;
+	return m_centroid;
 }
 
 /// maxDist between centroids allowed
@@ -57,15 +57,15 @@ bool TrackEntry::isSizeSimilar(const TrackEntry& teCompare, const double maxDevi
 }
 
 int TrackEntry::height() const {
-	return mBbox.height;
+	return m_bbox.height;
 }
 
 cv::Rect TrackEntry::rect() const {
-	return mBbox;
+	return m_bbox;
 }
 
 int TrackEntry::width() const {
-	return mBbox.width;
+	return m_bbox.width;
 }
 
 
@@ -73,19 +73,22 @@ int TrackEntry::width() const {
 // Track /////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-Track::Track(const TrackEntry& blob, int id) : mAvgVelocity(0,0), mConfidence(0),
-    mCounted(false), mId(id), mMarkedForDelete(false)  {
-	mHistory.push_back(blob);
+Track::Track(const TrackEntry& blob, int id) : m_avgVelocity(0,0), m_confidence(0),
+	m_counted(false), m_id(id), m_isMarkedForDelete(false),
+	m_leavingRoiTo(Direction::none), m_prevAvgVelocity(0,0)  {
+	
+	m_history.push_back(blob);
 }
 
 Track& Track::operator= (const Track& source) {
-	mHistory = source.mHistory;
+	m_history = source.m_history;
 	return *this;
 }
 
 /// add TrackEntry to history and update velocity
 void Track::addTrackEntry(const TrackEntry& blob) {
-	mHistory.push_back(blob);
+	m_history.push_back(blob);
+	m_prevAvgVelocity = m_avgVelocity;
 	updateAverageVelocity();
 	return;
 }
@@ -93,12 +96,12 @@ void Track::addTrackEntry(const TrackEntry& blob) {
 /// create substitute TrackEntry, if no close blob available
 void Track::addSubstitute() {
 	// take average velocity and compose bbox from centroid of previous element
-	cv::Point2i velocity((int)round(mAvgVelocity.x), (int)round(mAvgVelocity.y));
+	cv::Point2i velocity((int)round(m_avgVelocity.x), (int)round(m_avgVelocity.y));
 
-	cv::Point2i centroid = mHistory.back().centroid();
+	cv::Point2i centroid = m_history.back().centroid();
 	centroid += velocity;
-	int height = mHistory.back().height();
-	int width = mHistory.back().width();
+	int height = m_history.back().height();
+	int width = m_history.back().width();
 	int x = centroid.x - width / 2;
 	int y = centroid.y - height / 2;
 	// TODO: use Track::avgHeight, avgWidth
@@ -108,45 +111,107 @@ void Track::addSubstitute() {
 	return;
 }
 
-TrackEntry& Track::getActualEntry() { return mHistory.back(); }
+void Track::setLeavingRoiFlag(cv::Size roi) {
 
-int Track::getConfidence() { return mConfidence; }
+	// reliable velocity necessary, so only longer tracks are considered 
+	// once leavingRoiTo has been assigned, no re-calculation necessary
+	if ( (this->getHistory() > 4) && (m_leavingRoiTo == Direction::none) ) {
 
-int Track::getId() { return mId; }
+		int borderTolerance = roi.width * 5 / 100;
+
+		// compare edge position depending on direction of movement
+		bool isTrackMovingToRight = !(signBit(this->getVelocity().x));
+
+		// track moves to right
+		if (isTrackMovingToRight) {
+			// right edge of lastTrackEntry close to right border of roi
+			int rightEdgeTrack = this->getActualEntry().rect().x + this->getActualEntry().rect().width;
+			int rightLimitRoi = roi.width - borderTolerance;
+			if (rightEdgeTrack >= rightLimitRoi) {
+				m_leavingRoiTo = Direction::right;
+			}
+
+		// track moves to left
+		} else {
+			// left edge of lastTrackEntry close to left border of roi
+			int leftEdgeTrack = this->getActualEntry().rect().x;
+			int leftLimitRoi = borderTolerance;
+			if (leftEdgeTrack <= leftLimitRoi) {
+				m_leavingRoiTo = Direction::left;
+			}
+
+		} // end_if track movement
+	} // end_if assign leavingRoiTo
+
+	return;
+}
+
+TrackEntry& Track::getActualEntry() { return m_history.back(); }
+
+int Track::getConfidence() { return m_confidence; }
+
+int Track::getHistory() { return m_history.size(); }
+
+int Track::getId() { return m_id; }
 
 double Track::getLength() {
-	double length = euclideanDist(mHistory.front().centroid(), mHistory.back().centroid());
+	double length = euclideanDist(m_history.front().centroid(), m_history.back().centroid());
 	return length;
 }
 
-cv::Point2d Track::getVelocity() { return mAvgVelocity; }
+TrackEntry& Track::getPreviousEntry() { 
+	int idxPrevious = (int)m_history.size() - 2;
+	if (idxPrevious < 0) {
+		std::cerr << "Track::getPreviousEntry(): track has no previous entry, taking actual one" << std::endl;
+		idxPrevious = 0;
+	}
+	return m_history.at(idxPrevious);
+}
 
-bool Track::isCounted() { return mCounted; }
+cv::Point2d Track::getVelocity() { return m_avgVelocity; }
 
-bool Track::isMarkedForDelete() {return mMarkedForDelete;}
+bool Track::isCounted() { return m_counted; }
 
-void Track::setCounted(bool state) { mCounted = state; }
+bool Track::isMarkedForDelete() {return m_isMarkedForDelete;}
+
+bool Track::isReversingX() {
+	bool currentDirection = signBit(m_avgVelocity.x);
+	bool previousDirection = signBit(m_prevAvgVelocity.x);
+	return (currentDirection != previousDirection);
+}
+
+Track::Direction Track::leavingRoiTo() {
+	return m_leavingRoiTo;
+}
+
+void Track::markForDeletion() {
+	m_isMarkedForDelete = true;
+	return;
+}
+
+void Track::setCounted(bool state) { m_counted = state; }
 
 /// average velocity with recursive formula
 cv::Point2d& Track::updateAverageVelocity() {
 	const int window = 5;
-	int lengthHistory = mHistory.size();
+	int lengthHistory = m_history.size();
 
 	if (lengthHistory > 1) {
 		int idxMax = lengthHistory - 1;
-		cv::Point2d actVelocity = mHistory[idxMax].centroid() - mHistory[idxMax-1].centroid();
+		cv::Point2d actVelocity = m_history[idxMax].centroid() - m_history[idxMax-1].centroid();
 
 		if (idxMax <= window) { // window not fully populated yet
-			mAvgVelocity = (mAvgVelocity * (double)(idxMax - 1) + actVelocity) * (1.0 / (double)(idxMax));
+			m_avgVelocity = (m_avgVelocity * (double)(idxMax - 1) + actVelocity) * (1.0 / (double)(idxMax));
 		}
 		else { // window fully populated, remove window-1 velocity value
-			cv::Point2d oldVelocity = mHistory[idxMax-window].centroid() - mHistory[idxMax-window-1].centroid();
-			mAvgVelocity += (actVelocity - oldVelocity) * (1.0 / (double)window);
+			cv::Point2d oldVelocity = m_history[idxMax-window].centroid() - m_history[idxMax-window-1].centroid();
+			m_avgVelocity += (actVelocity - oldVelocity) * (1.0 / (double)window);
 		}
 	}
 
-	return mAvgVelocity;
+	return m_avgVelocity;
 }
+
 
 /// iterate through detected blobs, check if size is similar and distance close
 /// save closest blob to history and delete from blob input list 
@@ -176,14 +241,14 @@ void Track::updateTrack(std::list<TrackEntry>& blobs,  int maxConf,
 	{
 		addTrackEntry(*iBlobsMinDist);
 		iBlobs = blobs.erase(iBlobsMinDist);
-		mConfidence <  maxConf ? ++mConfidence : mConfidence =  maxConf;
+		m_confidence <  maxConf ? ++m_confidence : m_confidence =  maxConf;
 	}
 	else // no shape to assign availabe, calculate substitute
 	{
-		--mConfidence;
-		if (mConfidence <= 0) 
+		--m_confidence;
+		if (m_confidence <= 0) 
 		{
-			mMarkedForDelete = true;
+			m_isMarkedForDelete = true;
 		}
 		else
 			addSubstitute();
@@ -193,45 +258,119 @@ void Track::updateTrack(std::list<TrackEntry>& blobs,  int maxConf,
 }
 
 
+/// iterate through detected blobs, check if intersection
+/// assign all intersecting blobs to track
+/// store embracing rect of all assigned blobs to track
+void Track::updateTrackIntersect(std::list<TrackEntry>& blobs, double minInter, int maxConf) {
+	bool isTrackUpdateAvailable = false;
+	bool isTrackMovingToRight = !(signBit(this->getVelocity().x));
+
+	typedef std::list<TrackEntry>::iterator TiterBlobs;
+	TiterBlobs iBlobToAssign;
+	TiterBlobs iBlobs = blobs.begin();
+	while (iBlobs != blobs.end()) {
+
+		// assign based on area intersection between lastTrackEntry and newBlob
+		// larger than defined minimum intersection (in percentage of newBlob area)
+		cv::Rect rcIntersect = iBlobs->rect() & this->getActualEntry().rect();
+		if ( rcIntersect.area() > (static_cast<int>(minInter * iBlobs->rect().area())) ) {
+
+			// track moves to right OR leaves roi to right --> assign rightmost blob
+			if ( (isTrackMovingToRight) || (m_leavingRoiTo == Direction::right) ) {
+
+				// no blobToAssign yet -> take first matching one
+				if (!isTrackUpdateAvailable) {
+					iBlobToAssign = iBlobs;
+					isTrackUpdateAvailable = true;
+
+				// there is one blobToAssign already, check if there is a better one
+				} else {
+					if (iBlobs->centroid().x > iBlobToAssign->centroid().x)
+						iBlobToAssign = iBlobs;
+				}
+			}
+
+			// track moves to left OR leaves roi to left --> assign leftmost blob
+			if ( (!isTrackMovingToRight) || (m_leavingRoiTo == Direction::left) ) { 
+
+				// no blobToAssign yet -> take first matching one
+				if (!isTrackUpdateAvailable) {
+					iBlobToAssign = iBlobs;
+					isTrackUpdateAvailable = true;
+
+				// there is one blobToAssign already, check if there is a better one
+				} else {
+					if (iBlobs->centroid().x < iBlobToAssign->centroid().x)
+						iBlobToAssign = iBlobs;
+				}
+			}
+
+		} // end_if area intersection between lastTrackEntry and newBlob
+
+		++iBlobs;
+	}// end iterate through all input blobs
+
+
+	// assign best fitting blob to track, delete blob, increase track confidence
+	if (isTrackUpdateAvailable) {
+		this->addTrackEntry(*iBlobToAssign);
+		iBlobs = blobs.erase(iBlobToAssign);
+		m_confidence <  maxConf ? ++m_confidence : m_confidence =  maxConf;
+
+	// no fitting blob available --> add substitute blob and decrease confidence
+	} else {
+		--m_confidence;
+		if (m_confidence <= 0) 
+		{
+			m_isMarkedForDelete = true;
+		}
+		else
+		// TODO move assignment of substitute after assignment of other tracks (SceneTracker::updateTracksInterSect)
+		// reason: if other tracks are assigned, no substitute value needs to be added
+			addSubstitute();
+	}
+}
+
+
 //////////////////////////////////////////////////////////////////////////////
 // SceneTracker //////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
 SceneTracker::SceneTracker(Config* pConfig) : Observer(pConfig) {
 	// max number of tracks assignable (9)
-	mMaxNoIDs = stoi(mSubject->getParam("max_n_of_tracks"));
-	for (int i = mMaxNoIDs; i > 0; --i) // fill trackIDs with 9 ints
-		mTrackIDs.push_back(i);
+	m_maxNoIDs = stoi(mSubject->getParam("max_n_of_tracks"));
+	for (int i = m_maxNoIDs; i > 0; --i) // fill trackIDs with 9 ints
+		m_trackIDs.push_back(i);
 	// update all other relevant parameters from Config
 	update();
 }
 
 void SceneTracker::attachCountRecorder(CountRecorder* pRecorder) {
-	mRecorder = pRecorder;
+	m_recorder = pRecorder;
 }
 
 /// helper functor for SceneTracker::countVehicles
 class CntAndClassify {
 	int mFrameCnt;
 	int mDbgCnt;
-	ClassifyVehicle mClassify;
+	ClassifyVehicle m_classify;
 	CountResults mCr;
 public:
-	CntAndClassify(int frameCnt, ClassifyVehicle classify) : mFrameCnt(frameCnt), mClassify(classify) {mDbgCnt = 0;}
+	CntAndClassify(int frameCnt, ClassifyVehicle classify) : mFrameCnt(frameCnt), m_classify(classify) {mDbgCnt = 0;}
 
 	void operator()(Track& track) {
 		double trackLength = track.getLength();
 		
-		if (track.getConfidence() > mClassify.countConfidence) {
+		if (track.getConfidence() > m_classify.countConfidence) {
 			cv::Point2d velocity(track.getVelocity());
 			int width = track.getActualEntry().width();
 			int height = track.getActualEntry().height();
 
 			if (signBit(velocity.x)) { // moving to left
-				if ((track.getActualEntry().centroid().x < mClassify.countPos) && !track.isCounted()) {
-					if (trackLength > mClassify.trackLength) { // "count_track_length"
+				if ((track.getActualEntry().centroid().x < m_classify.countPos) && !track.isCounted()) {
+					if (trackLength > m_classify.trackLength) { // "count_track_length"
 						track.setCounted(true);
-						if ( (width >= mClassify.truckSize.width) && (height >= mClassify.truckSize.height) )
+						if ( (width >= m_classify.truckSize.width) && (height >= m_classify.truckSize.height) )
 							++mCr.truckLeft;
 						else // car
 							++mCr.carLeft;
@@ -239,10 +378,10 @@ public:
 				}
 			}
 			else {// moving to right
-				if ((track.getActualEntry().centroid().x > mClassify.countPos) && !track.isCounted()) {
-					if (trackLength > mClassify.trackLength) {
+				if ((track.getActualEntry().centroid().x > m_classify.countPos) && !track.isCounted()) {
+					if (trackLength > m_classify.trackLength) {
 						track.setCounted(true);
-						if ( (width >= mClassify.truckSize.width) && (height >= mClassify.truckSize.height) )
+						if ( (width >= m_classify.truckSize.width) && (height >= m_classify.truckSize.height) )
 							++mCr.truckRight;
 						else // car
 							++mCr.carRight;
@@ -269,7 +408,7 @@ CountResults SceneTracker::countVehicles(int frameCnt) {
 	// moving left && position < yy
 	// moving right && position > yy
 	
-	CntAndClassify cac = for_each(mTracks.begin(), mTracks.end(), CntAndClassify(frameCnt, mClassify));
+	CntAndClassify cac = for_each(m_tracks.begin(), m_tracks.end(), CntAndClassify(frameCnt, m_classify));
 	CountResults cr = cac.results();
 	return cr;
 }
@@ -277,10 +416,10 @@ CountResults SceneTracker::countVehicles(int frameCnt) {
 /// provide track-ID, if available
 int SceneTracker::nextTrackID()
 {
-	if (mTrackIDs.empty()) return 0;
+	if (m_trackIDs.empty()) return 0;
 	else {
-		int id = mTrackIDs.back();
-		mTrackIDs.pop_back();
+		int id = m_trackIDs.back();
+		m_trackIDs.pop_back();
 		return id;
 	}
 }
@@ -289,8 +428,8 @@ int SceneTracker::nextTrackID()
 bool SceneTracker::returnTrackID(int id)
 {
 	if (id > 0 ) {
-		if (mTrackIDs.size() < mMaxNoIDs) {
-			mTrackIDs.push_back(id);
+		if (m_trackIDs.size() < m_maxNoIDs) {
+			m_trackIDs.push_back(id);
 			return true;
 		}
 		else
@@ -302,70 +441,242 @@ bool SceneTracker::returnTrackID(int id)
 
 /// update observer's (SceneTracker) parameters from subject (Config)
 void SceneTracker::update() {
+	// frame size
+	int width = stoi(mSubject->getParam("roi_width"));
+	int height = stoi(mSubject->getParam("roi_height"));
+	m_roiSize = cv::Size(width, height);
+
 	// max confidence for tracks allowed
-	mMaxConfidence = stoi(mSubject->getParam("track_max_confidence"));
+	m_maxConfidence = stoi(mSubject->getParam("track_max_confidence"));
 
 	// assign to track: max deviation of track entries in percent
-	mMaxDeviation = stod(mSubject->getParam("track_max_deviation"));
+	m_maxDeviation = stod(mSubject->getParam("track_max_deviation"));
 
 	// assign to track: max distance between track entries in pixels
-	mMaxDist = stod(mSubject->getParam("track_max_distance"));
+	m_maxDist = stod(mSubject->getParam("track_max_distance"));
 
 	// min confidence for counting vehicle
-	mClassify.countConfidence = stoi(mSubject->getParam("count_confidence"));
+	m_classify.countConfidence = stoi(mSubject->getParam("count_confidence"));
 
 	// horizontal counting position in pixels
-	mClassify.countPos = stoi(mSubject->getParam("count_pos_x")); 
+	m_classify.countPos = stoi(mSubject->getParam("count_pos_x")); 
 	
 	// min track length for counting vehicles
-	mClassify.trackLength = stoi(mSubject->getParam("count_track_length"));
+	m_classify.trackLength = stoi(mSubject->getParam("count_track_length"));
 
 	// min truck size for classification
-	mClassify.truckSize = cv::Size2i(stoi(mSubject->getParam("truck_width_min")),
+	m_classify.truckSize = cv::Size2i(stoi(mSubject->getParam("truck_width_min")),
 		stoi(mSubject->getParam("truck_height_min")));
 }
 
 /// assign blobs to existing tracks
 ///  create new tracks from unassigned blobs
 ///  erase, if marked for deletion
-std::list<Track>* SceneTracker::updateTracks(list<TrackEntry>& blobs) {
+std::list<Track>* SceneTracker::updateTracks(std::list<TrackEntry>& blobs) {
 
 	// assign blobs to existing tracks
 	// delete orphaned tracks and free associated Track-ID
 	//  for_each track
-	std::list<Track>::iterator iTrack = mTracks.begin();
-	while (iTrack != mTracks.end())
+	std::list<Track>::iterator iTrack = m_tracks.begin();
+	while (iTrack != m_tracks.end())
 	{
 
-		iTrack->updateTrack(blobs, mMaxConfidence, mMaxDeviation, mMaxDist); // assign new blobs to existing track
+		iTrack->updateTrack(blobs, m_maxConfidence, m_maxDeviation, m_maxDist); // assign new blobs to existing track
 
 		if (iTrack->isMarkedForDelete())
 		{
 			returnTrackID(iTrack->getId());
-			iTrack = mTracks.erase(iTrack);
+			iTrack = m_tracks.erase(iTrack);
 		}
 		else
 			++iTrack;
 	}
 	
 	// create new tracks for unassigned blobs
-	mTrackIDs.sort(std::greater<int>());
+	m_trackIDs.sort(std::greater<int>());
 	std::list<TrackEntry>::iterator iBlob = blobs.begin();
 	while (iBlob != blobs.end())
 	{
 		int trackID = nextTrackID();
 		if (trackID > 0)
 			// TODO check on trackID
-			mTracks.push_back(Track(*iBlob, trackID));
+			m_tracks.push_back(Track(*iBlob, trackID));
 		++iBlob;
 	}
 	blobs.clear();
 	
-    return &mTracks;
+    return &m_tracks;
 }
 
 
+void combineTracks(std::list<Track>& tracks);
 
+void checkOcclusion(std::list<Track>& tracks);
+
+
+
+/// assign blobs to existing tracks
+///  create new tracks from unassigned blobs
+///  erase, if marked for deletion
+std::list<Track>* SceneTracker::updateTracksIntersect(std::list<TrackEntry>& blobs, long long frameCnt) {
+
+	//1 assign blobs
+	this->assignBlobs(blobs);
+
+	// TODO create substitute value for track without assigned blob
+
+	//2 combine tracks
+	combineTracks(m_tracks);
+
+	//3 delete tracks
+	this->deleteMarkedTracks();
+
+	//4 check leaving roi
+	this->checkTracksLeavingRoi();
+
+	//5 check reversing direction
+	// delete relevant tracks (blobs will be assigned to new track in next update step)
+	this->deleteReversingTracks();
+
+	//6 check occlusion
+	
+    return &m_tracks;
+}
+
+
+void SceneTracker::assignBlobs(std::list<TrackEntry>& blobs) {
+	// assign blobs to existing tracks
+	// delete orphaned tracks and free associated Track-ID
+	//  for_each track
+	typedef std::list<Track>::iterator TiterTracks;
+	TiterTracks iTrack = m_tracks.begin();
+	while (iTrack != m_tracks.end()) {
+		iTrack->updateTrackIntersect(blobs, 0.5, 4); // assign new blobs to existing track
+		++iTrack;
+	}
+	
+	// create new tracks for unassigned blobs
+	m_trackIDs.sort(std::greater<int>());
+	typedef std::list<TrackEntry>::iterator TiterBlobs;
+	TiterBlobs iBlob = blobs.begin();
+	while (iBlob != blobs.end()) {
+		int trackID = nextTrackID();
+		if (trackID > 0)
+			// TODO check on trackID
+			m_tracks.push_back(Track(*iBlob, trackID));
+		++iBlob;
+	}
+	blobs.clear();
+	return;
+}
+
+void combineTracks(std::list<Track>& tracks) {
+	// combine tracks, if they have
+	//   same direction and
+	//   area intersection
+	// assign smaller tracks to longer ones (size of track)
+	typedef std::list<Track>::iterator TiterTracks;
+	TiterTracks iTrack = tracks.begin();
+
+	// for_each track
+	while (iTrack != tracks.end()) {
+		// assing compare track to next list element
+		TiterTracks iTrackComp = iTrack;
+		++iTrackComp;
+
+		// for_each remaining tracks in list
+		while (iTrackComp != tracks.end()) {
+
+			// track history must have two elements or more in order to compare velocity
+			if (iTrack->getHistory() >= 2 && iTrackComp->getHistory() >= 2) {
+
+				bool isSameDirection	= ( signBit(iTrack->getVelocity().x) == signBit(iTrackComp->getVelocity().x) );
+				cv::Rect rcIntersec		= ( iTrack->getActualEntry().rect() & iTrackComp->getActualEntry().rect() );
+				bool isIntersection		= (rcIntersec.area() > 0);
+
+				if (isSameDirection && isIntersection) {
+					// iTrack longer -> assign iTrackComp and delete it afterwards
+					if (iTrack->getHistory() > iTrackComp->getHistory()) {
+						iTrack->addTrackEntry(iTrackComp->getActualEntry());
+						iTrackComp->markForDeletion();
+
+					// vice versa
+					} else {
+						iTrackComp->addTrackEntry(iTrack->getActualEntry());
+						iTrack->markForDeletion();
+					}
+				}
+			// at least one track has a too short history (fewer than 2 elements) -> do nothing
+			} else {
+			
+			}
+
+			++iTrackComp;
+		} // end_for_each remaining tracks in list
+
+		++iTrack;
+	} // end_for_each track
+	return;
+}
+
+/// for_each track set status variable m_leavingRoiTo to left or right,
+///  indicating that the track has touched left or right border of roi
+void SceneTracker::checkTracksLeavingRoi() {
+	typedef std::list<Track>::iterator TiterTracks;
+	TiterTracks iTrack = m_tracks.begin();
+
+	// for_each track
+	while (iTrack != m_tracks.end()) {
+
+		iTrack->setLeavingRoiFlag(m_roiSize);
+		++iTrack;
+	} // end_for_each track
+
+	return;
+}
+
+// for reversing tracks:
+// delete reversing tracks (blobs will be assigned to new track in next update step)
+void SceneTracker::deleteReversingTracks() {
+	typedef std::list<Track>::iterator TiterTracks;
+	TiterTracks iTrack = m_tracks.begin();
+
+	// for_each track
+	while (iTrack != m_tracks.end()) {
+		// track reverses and leaves roi to left or right
+		if(iTrack->isReversingX() && (iTrack->leavingRoiTo() != Track::Direction::none)) {
+				returnTrackID(iTrack->getId());
+				iTrack = m_tracks.erase(iTrack);
+		} else {
+			++iTrack;
+		}
+	} // end_for_each track
+
+	return;
+}
+
+
+void SceneTracker::deleteMarkedTracks() {
+	// delete orphaned tracks and free associated Track-ID
+	typedef std::list<Track>::iterator TiterTracks;
+	TiterTracks iTrack = m_tracks.begin();
+
+	while (iTrack != m_tracks.end()) {
+		if (iTrack->isMarkedForDelete()) {
+			returnTrackID(iTrack->getId());
+			iTrack = m_tracks.erase(iTrack);
+		} else {
+			++iTrack;
+		}
+	}
+	return;
+}
+
+
+void checkOcclusion(std::list<Track>& tracks) {
+
+	return;
+}
 
 
 // DEBUG
@@ -380,9 +691,9 @@ struct Trk {
 
 void SceneTracker::inspect(int frameCnt) {
 	vector<Trk> tracks;
-    (void(frameCnt));
-	list<Track>::iterator iTrack = mTracks.begin();
-	while (iTrack != mTracks.end()) {
+    (void(frameCnt)); // suppress "unused parameter" warning
+	list<Track>::iterator iTrack = m_tracks.begin();
+	while (iTrack != m_tracks.end()) {
 		tracks.push_back(Trk(iTrack->getId(), iTrack->getConfidence(), iTrack->getVelocity().x, iTrack->isCounted()));
 		++iTrack;
 	}

@@ -137,11 +137,13 @@ public:
 private:
 	void					update(); // updates observer with subject's parameters (Config)
 
-	typedef cv::BackgroundSubtractorMOG2 BackgrndSubtrac;
-	std::list<TrackEntry>		mBBoxes; // bounding boxes of newly detected objects
+	// as of opencv 3.0 call createBackgroundSubtractorMOG2() in order to create instance
+	// function returns smart pointer to instance
+	typedef cv::Ptr<cv::BackgroundSubtractorMOG2> PtrBgrndSubtr;
+	std::list<TrackEntry>		m_bBoxes; // bounding boxes of newly detected objects
 	struct AreaLimits {
 		int min;
-		int max; }				mBlobArea;
+		int max; }				m_blobArea;
 	struct CamProps {
 		int deviceID;
 		int resolutionID; }		m_camProps;
@@ -151,15 +153,15 @@ private:
 #endif
 
     std::string					m_inVideoFilePath;
-	cv::Mat						mFrame;
-	cv::Mat						mFgrMask; // foreground mask of moving objects
-	int							mFrameCounter; 
+	cv::Mat						m_frame;	// frame, read from camera or file
+	cv::Mat						m_fgrMask;	// foreground mask of moving objects
+	int							m_frameCounter; 
 	cv::Size2d					m_frameSize;
-	std::string					mFrameWndName;
+	std::string					m_frameWndName;
 	//Inset						m_inset;
 	bool						m_isCaptureInitialized;
 	bool						m_isFileCapture; 
-	BackgrndSubtrac				mMog2;
-	Rect2d						mRoi;	 // region of interest, within framesize
-	cv::VideoWriter				mVideoOut;
+	PtrBgrndSubtr				m_mog2;		// pointer to background subtractor MOG2 (mixuture of gaussians)
+	Rect2d						m_roi;		// region of interest, within framesize
+	cv::VideoWriter				m_videoOut;
 };

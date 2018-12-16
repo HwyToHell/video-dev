@@ -25,6 +25,8 @@
    |-cnn (experimental classification with neural networks)  
    |  
    |-cpp (developmental private libs, used in above projects)  
+   |  
+   |-utilities (ressources for testing frame-processing, tracking algorithms 
    
 ### TODO
 msvc: change includes: #include "../../car-count/include/config.h"
@@ -32,6 +34,9 @@ instead of: #include "../car-count/include/config.h"
 and set project location accordingly
 
 ### Change history
+[2018-11-11]
+- utility directory created for testing frame post-processing and tracking algorithms
+
 [2018-09-22]
 - separated code directory from IDE project directory
 

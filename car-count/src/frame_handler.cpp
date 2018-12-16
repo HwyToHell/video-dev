@@ -372,9 +372,13 @@ void Inset::putCount(CountResults cr) {
 //////////////////////////////////////////////////////////////////////////////
 FrameHandler::FrameHandler(Config* pConfig) : 
 	Observer(pConfig), 
-    mFrameCounter(0),
-	m_isCaptureInitialized(false),
-    mMog2(100, 25, false) {
+    m_frameCounter(0),
+	m_isCaptureInitialized(false) {
+
+	// instantiate background subtractor MOG2 (mixture of gaussians)
+	// pointer does not have to be deleted
+	m_mog2 = cv::createBackgroundSubtractorMOG2(100, 25, false);
+
 	// instantiate cam input
 	#if defined (_WIN32)
 	m_captureWinCam = std::unique_ptr<CamInput>(new CamInput);
@@ -444,22 +448,22 @@ void FrameHandler::adjustFrameSizeDependentParams(int new_size_x, int new_size_y
 }
 
 std::list<TrackEntry>& FrameHandler::calcBBoxes() {
-	// find boundig boxes of newly detected objects, store them in mBBoxes and return them
+	// find boundig boxes of newly detected objects, store them in m_bBoxes and return them
 	std::vector<std::vector<cv::Point> > contours;
 	std::vector<cv::Vec4i> hierarchy;
 
-	mBBoxes.clear();
+	m_bBoxes.clear();
 
-	cv::findContours(mFgrMask, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, cv::Point(0,0));
-	// calc bounding boxes of all detections and store in mBBoxes
+	cv::findContours(m_fgrMask, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, cv::Point(0,0));
+	// calc bounding boxes of all detections and store in m_bBoxes
 	for (unsigned int i = 0; i < contours.size(); i++) { 
 		cv::Rect bbox = boundingRect(contours[i]);
-		if ((bbox.area() > mBlobArea.min) && (bbox.area() < mBlobArea.max)) {
-				mBBoxes.push_back(TrackEntry(bbox));
+		if ((bbox.area() > m_blobArea.min) && (bbox.area() < m_blobArea.max)) {
+				m_bBoxes.push_back(TrackEntry(bbox));
 		}
 	}
 	
-	return mBBoxes;
+	return m_bBoxes;
 }
 
 /// load inset background from file, fit to frame size
@@ -510,7 +514,7 @@ Inset FrameHandler::createInset(std::string insetFilePath) {
 
 
 int FrameHandler::getFrameInfo() {
-	int type = mFrame.type();
+	int type = m_frame.type();
 	return type;
 }
 
@@ -693,8 +697,8 @@ bool FrameHandler::openCapSource(bool fromFile) {
 
 bool FrameHandler::openVideoOut(std::string fileName) {
 	std::string path = mSubject->getParam("application_path");
-	mVideoOut.open(path + fileName, CV_FOURCC('M','P','4','V'), 10, m_frameSize);
-	if (!mVideoOut.isOpened())
+	m_videoOut.open(path + fileName, CV_FOURCC('M','P','4','V'), 10, m_frameSize);
+	if (!m_videoOut.isOpened())
 		return false;
 	return true;
 }
@@ -711,7 +715,7 @@ bool FrameHandler::segmentFrame() {
 
 	// split between file and cam capture (Win32)
 	if (m_isFileCapture) {
-		isSuccess = m_capture.read(mFrame);
+		isSuccess = m_capture.read(m_frame);
 		if (!isSuccess) {
 			std::cout << "segmentFrame: cannot read frame from file" << std::endl;
 			return false;
@@ -719,14 +723,14 @@ bool FrameHandler::segmentFrame() {
 
 	} else { // isCamCapture
 		#if defined (_WIN32)
-		isSuccess = m_captureWinCam->read(mFrame);
+		isSuccess = m_captureWinCam->read(m_frame);
 		if (!isSuccess) {
 			std::cout << "segmentFrame: cannot read frame from cam" << std::endl;
 			return false;
 		}
 
 		#elif defined (__linux__)
-		isSuccess = m_capture.read(mFrame);
+		isSuccess = m_capture.read(m_frame);
 		if (!isSuccess) {
 			std::cout << "segmentFrame: cannot read frame from cam" << std::endl;
 			return false;
@@ -737,30 +741,30 @@ bool FrameHandler::segmentFrame() {
 		#endif
 	}
 
-	++mFrameCounter;
+	++m_frameCounter;
 
 	// apply roi
-	cv::Mat frame_roi = mFrame(mRoi);
+	cv::Mat frame_roi = m_frame(m_roi);
 	cv::Mat fPreProcessed, fgmask, fThresh, fMedBlur;
 
 	// pre-processing
 	cv::GaussianBlur(frame_roi, fPreProcessed, cv::Size(9,9), 2);
 
 	// background segmentation 
-	mMog2(fPreProcessed, fgmask);
+	m_mog2->apply(fPreProcessed, fgmask);
 
 	// post-processing
 	cv::threshold(fgmask, fThresh, 0, 255, cv::THRESH_BINARY);	
 	cv::medianBlur(fThresh, fMedBlur, 5);
-	cv::dilate(fMedBlur, mFgrMask, cv::Mat(7,7,CV_8UC1,1), cvPoint(-1,-1),1);
+	cv::dilate(fMedBlur, m_fgrMask, cv::Mat(7,7,CV_8UC1,1), cvPoint(-1,-1),1);
 	return true;
 }
 
 
 void FrameHandler::showFrame(std::list<Track>* tracks, Inset inset) {
 	// show frame counter, int font = cnt % 8;
-	cv::putText(mFrame, std::to_string((long long)mFrameCounter), cv::Point(10,20), 0, 0.5, green, 1);
-	cv::rectangle(mFrame, mRoi, blue);
+	cv::putText(m_frame, std::to_string((long long)m_frameCounter), cv::Point(10,20), 0, 0.5, green, 1);
+	cv::rectangle(m_frame, m_roi, blue);
 	cv::Scalar boxColor = green;
 	int line = Line::thin;
 
@@ -769,8 +773,8 @@ void FrameHandler::showFrame(std::list<Track>* tracks, Inset inset) {
     std::list<Track>::iterator iTrack = tracks->begin();
     while (iTrack != tracks->end()){
 		rec = iTrack->getActualEntry().rect();
-		rec.x += (int)mRoi.x;
-		rec.y += (int)mRoi.y;
+		rec.x += (int)m_roi.x;
+		rec.y += (int)m_roi.y;
 		boxColor = red;
 		line = Line::thin;
 		if (iTrack->getConfidence() > 3)
@@ -779,19 +783,19 @@ void FrameHandler::showFrame(std::list<Track>* tracks, Inset inset) {
 			boxColor = green;
 			line = Line::thick;
 		}
-		cv::rectangle(mFrame, rec, boxColor, line);
+		cv::rectangle(m_frame, rec, boxColor, line);
 		++iTrack;
 	}
 
 	// copy inset with vehicle counter to frame
 	if (inset.composedImage.data) {
 		// TODO adjust copy position depending on frame size
-		int yInset = mFrame.rows - inset.composedImage.rows; 
-		inset.composedImage.copyTo(mFrame(cv::Rect(0, yInset, inset.composedImage.cols, inset.composedImage.rows)));
+		int yInset = m_frame.rows - inset.composedImage.rows; 
+		inset.composedImage.copyTo(m_frame(cv::Rect(0, yInset, inset.composedImage.cols, inset.composedImage.rows)));
 	}
 
 	// display image
-	cv::imshow(mFrameWndName, mFrame);
+	cv::imshow(m_frameWndName, m_frame);
 }
 
 void FrameHandler::update() {
@@ -801,22 +805,22 @@ void FrameHandler::update() {
 	m_frameSize.width = stoi(mSubject->getParam("frame_size_x"));
 	m_frameSize.height = stoi(mSubject->getParam("frame_size_y"));
 	// region of interest
-	mRoi.x = stod(mSubject->getParam("roi_x"));
-	mRoi.y = stod(mSubject->getParam("roi_y"));
-	mRoi.width = stod(mSubject->getParam("roi_width"));
-	mRoi.height = stod(mSubject->getParam("roi_height"));
+	m_roi.x = stod(mSubject->getParam("roi_x"));
+	m_roi.y = stod(mSubject->getParam("roi_y"));
+	m_roi.width = stod(mSubject->getParam("roi_width"));
+	m_roi.height = stod(mSubject->getParam("roi_height"));
 	
-	// mBlobArea.min(200)		-> smaller blobs will be discarded 320x240=100   640x480=500
-	// mBlobArea.max(20000)		-> larger blobs will be discarded  320x240=10000 640x480=60000
-	mBlobArea.min = stoi(mSubject->getParam("blob_area_min"));
-	mBlobArea.max = stoi(mSubject->getParam("blob_area_max"));
+	// m_blobArea.min(200)		-> smaller blobs will be discarded 320x240=100   640x480=500
+	// m_blobArea.max(20000)		-> larger blobs will be discarded  320x240=10000 640x480=60000
+	m_blobArea.min = stoi(mSubject->getParam("blob_area_min"));
+	m_blobArea.max = stoi(mSubject->getParam("blob_area_max"));
 }
 
 
 void FrameHandler::writeFrame() {
-	mVideoOut.write(mFrame);
+	m_videoOut.write(m_frame);
 }
 
 int FrameHandler::getFrameCount() {
-	return mFrameCounter;
+	return m_frameCounter;
 }
