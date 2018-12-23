@@ -86,15 +86,15 @@ Track& Track::operator= (const Track& source) {
 }
 
 /// add TrackEntry to history and update velocity
-void Track::addTrackEntry(const TrackEntry& blob) {
+void Track::addTrackEntry(const TrackEntry& blob, cv::Size roi) {
 	m_history.push_back(blob);
 	m_prevAvgVelocity = m_avgVelocity;
-	updateAverageVelocity();
+	updateAverageVelocity(roi);
 	return;
 }
 
 /// create substitute TrackEntry, if no close blob available
-void Track::addSubstitute() {
+void Track::addSubstitute(cv::Size roi) {
 	// take average velocity and compose bbox from centroid of previous element
 	cv::Point2i velocity((int)round(m_avgVelocity.x), (int)round(m_avgVelocity.y));
 
@@ -107,7 +107,7 @@ void Track::addSubstitute() {
 	// TODO: use Track::avgHeight, avgWidth
 	// TODO: check lower and upper bounds of video window
 
-	addTrackEntry(TrackEntry(x, y, width, height));
+	addTrackEntry(TrackEntry(x, y, width, height), roi);
 	return;
 }
 
@@ -175,9 +175,16 @@ bool Track::isCounted() { return m_counted; }
 bool Track::isMarkedForDelete() {return m_isMarkedForDelete;}
 
 bool Track::isReversingX() {
-	bool currentDirection = signBit(m_avgVelocity.x);
-	bool previousDirection = signBit(m_prevAvgVelocity.x);
-	return (currentDirection != previousDirection);
+
+	// track history must have at least two elements to compare velocity
+	//  and determine direction
+	if (this->getHistory() >= 3) {
+		bool currentDirection = signBit(m_avgVelocity.x);
+		bool previousDirection = signBit(m_prevAvgVelocity.x);
+		return (currentDirection != previousDirection);
+	} else {
+		return false;
+	}
 }
 
 Track::Direction Track::leavingRoiTo() {
@@ -192,20 +199,31 @@ void Track::markForDeletion() {
 void Track::setCounted(bool state) { m_counted = state; }
 
 /// average velocity with recursive formula
-cv::Point2d& Track::updateAverageVelocity() {
-	const int window = 5;
+cv::Point2d& Track::updateAverageVelocity(cv::Size roi) {
+	const int window = 3;
 	int lengthHistory = m_history.size();
 
-	if (lengthHistory > 1) {
-		int idxMax = lengthHistory - 1;
-		cv::Point2d actVelocity = m_history[idxMax].centroid() - m_history[idxMax-1].centroid();
+	// TODO check bounds
+	int borderTolerance = roi.width * 5 / 100;
+	int leftEdge = getActualEntry().rect().x;
+	int rightEdge = leftEdge + getActualEntry().rect().width;
+	
+	// front and back edge of blob are outside roi -> keep avgVelocity
+	if ( (leftEdge <= borderTolerance) && (rightEdge >= (roi.width - borderTolerance)) ) {
+		(void)0;
+	// one or both blob edges are inside roi -> update moving average 
+	} else {
+		if (lengthHistory > 1) {
+			int idxMax = lengthHistory - 1;
+			cv::Point2d actVelocity = m_history[idxMax].centroid() - m_history[idxMax-1].centroid();
 
-		if (idxMax <= window) { // window not fully populated yet
-			m_avgVelocity = (m_avgVelocity * (double)(idxMax - 1) + actVelocity) * (1.0 / (double)(idxMax));
-		}
-		else { // window fully populated, remove window-1 velocity value
-			cv::Point2d oldVelocity = m_history[idxMax-window].centroid() - m_history[idxMax-window-1].centroid();
-			m_avgVelocity += (actVelocity - oldVelocity) * (1.0 / (double)window);
+			if (idxMax <= window) { // window not fully populated yet
+				m_avgVelocity = (m_avgVelocity * (double)(idxMax - 1) + actVelocity) * (1.0 / (double)(idxMax));
+			}
+			else { // window fully populated, remove window-1 velocity value
+				cv::Point2d oldVelocity = m_history[idxMax-window].centroid() - m_history[idxMax-window-1].centroid();
+				m_avgVelocity += (actVelocity - oldVelocity) * (1.0 / (double)window);
+			}
 		}
 	}
 
@@ -215,7 +233,7 @@ cv::Point2d& Track::updateAverageVelocity() {
 
 /// iterate through detected blobs, check if size is similar and distance close
 /// save closest blob to history and delete from blob input list 
-void Track::updateTrack(std::list<TrackEntry>& blobs,  int maxConf, 
+void Track::updateTrack(std::list<TrackEntry>& blobs, cv::Size roi, int maxConf, 
 	double maxDeviation, double maxDist) {
 	
 	typedef std::list<TrackEntry>::iterator TiterBlobs;
@@ -239,7 +257,7 @@ void Track::updateTrack(std::list<TrackEntry>& blobs,  int maxConf,
 	// assign closest shape to track and delete from list of blobs
 	if (iBlobsMinDist != blobs.end()) // shape to assign available
 	{
-		addTrackEntry(*iBlobsMinDist);
+		addTrackEntry(*iBlobsMinDist, roi);
 		iBlobs = blobs.erase(iBlobsMinDist);
 		m_confidence <  maxConf ? ++m_confidence : m_confidence =  maxConf;
 	}
@@ -251,7 +269,7 @@ void Track::updateTrack(std::list<TrackEntry>& blobs,  int maxConf,
 			m_isMarkedForDelete = true;
 		}
 		else
-			addSubstitute();
+			addSubstitute(roi);
 	}
 
 	return;
@@ -261,7 +279,7 @@ void Track::updateTrack(std::list<TrackEntry>& blobs,  int maxConf,
 /// iterate through detected blobs, check if intersection
 /// assign all intersecting blobs to track
 /// store embracing rect of all assigned blobs to track
-void Track::updateTrackIntersect(std::list<TrackEntry>& blobs, double minInter, int maxConf) {
+void Track::updateTrackIntersect(std::list<TrackEntry>& blobs, cv::Size roi, double minInter, int maxConf) {
 	bool isTrackUpdateAvailable = false;
 	bool isTrackMovingToRight = !(signBit(this->getVelocity().x));
 
@@ -313,7 +331,7 @@ void Track::updateTrackIntersect(std::list<TrackEntry>& blobs, double minInter, 
 
 	// assign best fitting blob to track, delete blob, increase track confidence
 	if (isTrackUpdateAvailable) {
-		this->addTrackEntry(*iBlobToAssign);
+		this->addTrackEntry(*iBlobToAssign, roi);
 		iBlobs = blobs.erase(iBlobToAssign);
 		m_confidence <  maxConf ? ++m_confidence : m_confidence =  maxConf;
 
@@ -327,7 +345,7 @@ void Track::updateTrackIntersect(std::list<TrackEntry>& blobs, double minInter, 
 		else
 		// TODO move assignment of substitute after assignment of other tracks (SceneTracker::updateTracksInterSect)
 		// reason: if other tracks are assigned, no substitute value needs to be added
-			addSubstitute();
+			addSubstitute(roi);
 	}
 }
 
@@ -481,7 +499,7 @@ std::list<Track>* SceneTracker::updateTracks(std::list<TrackEntry>& blobs) {
 	while (iTrack != m_tracks.end())
 	{
 
-		iTrack->updateTrack(blobs, m_maxConfidence, m_maxDeviation, m_maxDist); // assign new blobs to existing track
+		iTrack->updateTrack(blobs, m_roiSize, m_maxConfidence, m_maxDeviation, m_maxDist); // assign new blobs to existing track
 
 		if (iTrack->isMarkedForDelete())
 		{
@@ -509,7 +527,7 @@ std::list<Track>* SceneTracker::updateTracks(std::list<TrackEntry>& blobs) {
 }
 
 
-void combineTracks(std::list<Track>& tracks);
+void combineTracks(std::list<Track>& tracks, cv::Size roi);
 
 void checkOcclusion(std::list<Track>& tracks);
 
@@ -526,7 +544,7 @@ std::list<Track>* SceneTracker::updateTracksIntersect(std::list<TrackEntry>& blo
 	// TODO create substitute value for track without assigned blob
 
 	//2 combine tracks
-	combineTracks(m_tracks);
+	combineTracks(m_tracks, m_roiSize);
 
 	//3 delete tracks
 	this->deleteMarkedTracks();
@@ -551,7 +569,7 @@ void SceneTracker::assignBlobs(std::list<TrackEntry>& blobs) {
 	typedef std::list<Track>::iterator TiterTracks;
 	TiterTracks iTrack = m_tracks.begin();
 	while (iTrack != m_tracks.end()) {
-		iTrack->updateTrackIntersect(blobs, 0.5, 4); // assign new blobs to existing track
+		iTrack->updateTrackIntersect(blobs, m_roiSize, 0.4, 4); // assign new blobs to existing track
 		++iTrack;
 	}
 	
@@ -570,7 +588,7 @@ void SceneTracker::assignBlobs(std::list<TrackEntry>& blobs) {
 	return;
 }
 
-void combineTracks(std::list<Track>& tracks) {
+void combineTracks(std::list<Track>& tracks, cv::Size roi) {
 	// combine tracks, if they have
 	//   same direction and
 	//   area intersection
@@ -597,12 +615,12 @@ void combineTracks(std::list<Track>& tracks) {
 				if (isSameDirection && isIntersection) {
 					// iTrack longer -> assign iTrackComp and delete it afterwards
 					if (iTrack->getHistory() > iTrackComp->getHistory()) {
-						iTrack->addTrackEntry(iTrackComp->getActualEntry());
+						iTrack->addTrackEntry(iTrackComp->getActualEntry(), roi);
 						iTrackComp->markForDeletion();
 
 					// vice versa
 					} else {
-						iTrackComp->addTrackEntry(iTrack->getActualEntry());
+						iTrackComp->addTrackEntry(iTrack->getActualEntry(), roi);
 						iTrack->markForDeletion();
 					}
 				}
@@ -636,17 +654,28 @@ void SceneTracker::checkTracksLeavingRoi() {
 }
 
 // for reversing tracks:
-// delete reversing tracks (blobs will be assigned to new track in next update step)
+// delete reversing tracks and assign last entry to new track
 void SceneTracker::deleteReversingTracks() {
 	typedef std::list<Track>::iterator TiterTracks;
 	TiterTracks iTrack = m_tracks.begin();
 
 	// for_each track
 	while (iTrack != m_tracks.end()) {
-		// track reverses and leaves roi to left or right
-		if(iTrack->isReversingX() && (iTrack->leavingRoiTo() != Track::Direction::none)) {
+		// track reverses
+		if(iTrack->isReversingX()) { //&& (iTrack->leavingRoiTo() != Track::Direction::none)) {
+			int id = this->nextTrackID();
+
+			// if trackID available: create new track from lastTrackEntry, delete reversing track
+			if (id > 0) {
+				m_tracks.push_back(Track(iTrack->getActualEntry(), id));
 				returnTrackID(iTrack->getId());
 				iTrack = m_tracks.erase(iTrack);
+			
+			// no trackID available
+			} else {
+				cerr << "no track id available" << endl;
+			}
+
 		} else {
 			++iTrack;
 		}

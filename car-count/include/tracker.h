@@ -51,10 +51,10 @@ public:
 	Track& operator= (const Track& source);
 	
 	/// adds motion detection to track
-	void addTrackEntry(const TrackEntry& blob);
+	void addTrackEntry(const TrackEntry& blob, cv::Size roi);
 
 	/// adds substitute motion detection, extrapolating from prevoius size and velocity
-	void addSubstitute();
+	void addSubstitute(cv::Size roi);
 
 	/// set flag if track is about leaving roi area
 	void setLeavingRoiFlag(cv::Size roi);
@@ -106,7 +106,7 @@ public:
 	/// \param[in] maxConf maximum value for confidence of track
 	/// \param[in] maxDeviation maximum allowed deviation in % of width and height for new motion detection
 	/// \param[in] maxDist maximum distance in pixels of new motion detection
-	void updateTrack(std::list<TrackEntry>& blobs, int maxConf, 
+	void updateTrack(std::list<TrackEntry>& blobs, cv::Size roi, int maxConf, 
 		double maxDeviation, double maxDist);
 	
 	/// update track based on blob intersection
@@ -115,7 +115,7 @@ public:
 	/// \param[in] minInter necessary percentage of intersection between track
 	///  and new detected blob (0 ... 1 = 100% of new detected blob)
 	/// \param[in] maxConf maximum value for confidence of track
-	void updateTrackIntersect(std::list<TrackEntry>& blobs, double minInter = 0.5, int maxConf = 2);
+	void updateTrackIntersect(std::list<TrackEntry>& blobs, cv::Size roi, double minInter = 0.5, int maxConf = 2);
 
 private:
 	cv::Point2d m_avgVelocity;
@@ -127,7 +127,7 @@ private:
 	Direction m_leavingRoiTo;
 	cv::Point2d m_prevAvgVelocity;
 
-	cv::Point2d& updateAverageVelocity();
+	cv::Point2d& updateAverageVelocity(cv::Size roi);
 };
 
 /// recorder.h
