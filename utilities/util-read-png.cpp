@@ -35,11 +35,14 @@ bool waitForEnter();
 
 int main(int argc, char* argv[]) {
 	using namespace std;
-	string path320("D:/Users/Holger/counter/traffic320x240/");
-	int start = 653;
-	int stop = 715;
+	//string path320("D:/Users/Holger/counter/traffic320x240/");
+	//string path640("D:/Users/Holger/counter/traffic640x480_low_pass/");
+	//string busStop("D:/Users/Holger/counter/2017-09-18/bus_stop/");
+	string opposite("D:/Users/Holger/counter/2017-09-18/opposite/"); 
+	int start = 845;
+	int stop = 890;
 
-	string workPath = findWorkPath(start, stop, path320);
+	string workPath = findWorkPath(start, stop, opposite);
 	if (workPath == "") {
 		waitForEnter();
 		return -1;
@@ -52,7 +55,11 @@ int main(int argc, char* argv[]) {
 	Config* pConfig = &config;
 
 	// set config param roi according to image size in work path
-	setConfigRoiSize(&config, workPath, filePrefix, start);
+	if (!setConfigRoiSize(&config, workPath, filePrefix, start)) {
+		cerr << "roi size has not been set properly -> exit" << endl;
+		waitForEnter();
+		return -1;
+	}
 
 	SceneTracker scene(pConfig); 
 	SceneTracker* pScene = &scene;
@@ -74,12 +81,17 @@ std::string findWorkPath(int startFrame, int stopFrame, std::string descendPath)
 
 	// directory prefix to look for
 	string dirPrefix = std::to_string((long long)startFrame) + " - " + std::to_string((long long)stopFrame);
-	
-	// list descendPath content
-	fs::path descendPathFS(descendPath);
-	fs::directory_iterator iDir(descendPathFS);
 	string workPath("");
+	
+	// return empty string, if path does not exist
+	fs::path descendPathFS(descendPath);
+	if (!fs::exists(descendPathFS)) {
+		cerr << "work path does not exist: " << descendPath << endl;
+		return "";
+	}
 
+	// list descendPath content
+	fs::directory_iterator iDir(descendPathFS);
 	while (iDir != fs::directory_iterator()) {
 		//cout << iDir->path().filename() << endl;
 		string dir(iDir->path().filename().string());
@@ -223,6 +235,11 @@ bool setConfigRoiSize(Config* pConfig, std::string workPath, std::string filePre
 	using namespace std; 
 
 	cv::Mat frame = readImage(workPath, filePrefix, startFrame);
+	if (frame.empty()) {
+		cerr << "was not able to read image file from path: " << workPath << endl;
+		return false;
+	}
+
 	bool success = pConfig->setParam("roi_width", to_string((long long) frame.size().width) );
 	success &= pConfig->setParam("roi_height", to_string((long long)frame.size().height) );
 

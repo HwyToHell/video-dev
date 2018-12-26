@@ -117,20 +117,23 @@ int segmentMotion(
 		int startFrame,
 		int stopFrame,
 		cv::Rect roi, 
-		std::string videoPath = "D:\\Users\\Holger\\counter\\traffic640x480.avi",
+		std::string videoPath,
 		std::string outPath = "D:\\Users\\Holger\\counter\\segment-motion\\");
 
-int main_segment(int argc, char* argv[]) {
+int main_post(int argc, char* argv[]) {
 
-	// cv::Rect roi(250, 200, 200, 200); // roi 640x480
-	cv::Rect roi(120, 70, 100, 100);	 // roi 320x240
+	 cv::Rect roi(250, 200, 200, 200); // roi 640x480
+	//cv::Rect roi(120, 70, 100, 100);	 // roi 320x240
 	string path320 = "D:\\Users\\Holger\\counter\\traffic320x240.avi";
+	string path640 = "D:\\Users\\Holger\\counter\\traffic640x480.avi";
+	string busStop = "D:\\Users\\Holger\\counter\\2017-09-18\\bus_stop_3m17s_4m50s.mp4"; 
+	string opposite = "D:\\Users\\Holger\\counter\\2017-09-18\\opposite_17m37s_17m41s.mp4";
 
 	// 2, 20	// opposite two cars
 	// 105, 116 // single car to right
 	// 244, 260 // opposite car + car with trailer
 	// 653, 715 // truck, car, bus
-	segmentMotion(653, 715, roi, path320);
+	segmentMotion(50, 67, roi, path640);
 
 	cout << endl << "Press <enter> to exit" << endl;
 	string str;
@@ -159,7 +162,7 @@ int segmentMotion(int startFrame, int stopFrame, cv::Rect roi, std::string video
 	
 	// TODO delete // try different background subtractors
 	BackgroundSubtractorLowPass lowPass(0.005, 40);
-	BackgroundSubtractorVibe vibe;
+	//BackgroundSubtractorVibe vibe;
 
 	while (cap.read(image)) {
 
@@ -241,12 +244,20 @@ int segmentMotion(int startFrame, int stopFrame, cv::Rect roi, std::string video
 			cv::imwrite(filePath, morphResult);
 			*/
 			cout << "frame: " << frameCount << endl;
-			// debug image
-			string path = "D:\\Users\\Holger\\counter\\segment-motion\\";
-			string filePath = path + "debug_" + to_string(frameCount) + ".png";
+
+			// save first and last full frame for time information
+			if ( (frameCount == startFrame) || (frameCount == stopFrame) ) {
+				string filePath = outPath + "frame_" + to_string(frameCount) + ".png";
+				cv::imwrite(filePath, image);
+			}
+
+			
+			// debug images with blue box, frame by frame
+			string filePath = outPath + "debug_" + to_string(frameCount) + ".png";
 			cv::imwrite(filePath, debugImg);
 
-			//filePath = path + "frame_" + to_string(frameCount) + ".png";
+			// roi of original frame
+			//filePath = outPath + "frame_" + to_string(frameCount) + ".png";
 			//cv::imwrite(filePath, frame_roi);
 
 			//filePath = path + "lowpass_" + to_string(frameCount) + ".png";
@@ -269,7 +280,8 @@ int segmentMotion(int startFrame, int stopFrame, cv::Rect roi, std::string video
 			//cv::imwrite("frame.jpg", frame);
 			break;
 		}
-	}
+	} // end_while
+	cap.release();
 	return 0;
 }
 

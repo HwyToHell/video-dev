@@ -107,6 +107,17 @@ void Track::addSubstitute(cv::Size roi) {
 	// TODO: use Track::avgHeight, avgWidth
 	// TODO: check lower and upper bounds of video window
 
+	// clip x, if outside roi
+	if (x < 0) {
+		width = width + x;
+		x = 0;
+	}
+	int xClipRight = x + width - roi.width;
+	if (xClipRight > 0) {
+		width = width - xClipRight;
+	}
+
+
 	addTrackEntry(TrackEntry(x, y, width, height), roi);
 	return;
 }
@@ -176,12 +187,28 @@ bool Track::isMarkedForDelete() {return m_isMarkedForDelete;}
 
 bool Track::isReversingX() {
 
-	// track history must have at least two elements to compare velocity
-	//  and determine direction
+	// track history must have at least two elements in order to
+	// compare velocity and determine direction
 	if (this->getHistory() >= 3) {
-		bool currentDirection = signBit(m_avgVelocity.x);
-		bool previousDirection = signBit(m_prevAvgVelocity.x);
-		return (currentDirection != previousDirection);
+		
+		// velocity difference must be significant in order to 
+		// avoid re-assigning tracks of stand still motion, e.g. waving leaves
+		const double backlash = 0.5;
+
+		// previous direction different than current
+		if (signBit(m_prevAvgVelocity.x) != signBit(m_avgVelocity.x)) {
+			// at least one velocity must be outside backlash
+			if ( abs(m_prevAvgVelocity.x) > backlash || abs(m_avgVelocity.x) > backlash ) {
+				return true;
+			} else {
+				return false;
+			}
+		// same direction
+		} else {
+			return false;
+		}
+
+	// track history too short
 	} else {
 		return false;
 	}
