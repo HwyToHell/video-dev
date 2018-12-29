@@ -297,7 +297,7 @@ bool trackImageSequence(SceneTracker* pScene, std::string directory, std::string
 	
 		std::vector<cv::Rect> motionRects = motionRectsFromDebugFrame(input, blue);
 		// vector -> list (required input for SceneTracker.updateTracks);
-		std::list<TrackEntry> motionRectList;
+		std::list<cv::Rect> motionRectList;
 		for (unsigned int i = 0; i < motionRects.size(); ++i) {
 			motionRectList.push_back(motionRects[i]);
 		}

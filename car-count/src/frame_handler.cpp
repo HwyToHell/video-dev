@@ -447,7 +447,7 @@ void FrameHandler::adjustFrameSizeDependentParams(int new_size_x, int new_size_y
 	}
 }
 
-std::list<TrackEntry>& FrameHandler::calcBBoxes() {
+std::list<cv::Rect>& FrameHandler::calcBBoxes() {
 	// find boundig boxes of newly detected objects, store them in m_bBoxes and return them
 	std::vector<std::vector<cv::Point> > contours;
 	std::vector<cv::Vec4i> hierarchy;
@@ -459,7 +459,7 @@ std::list<TrackEntry>& FrameHandler::calcBBoxes() {
 	for (unsigned int i = 0; i < contours.size(); i++) { 
 		cv::Rect bbox = boundingRect(contours[i]);
 		if ((bbox.area() > m_blobArea.min) && (bbox.area() < m_blobArea.max)) {
-				m_bBoxes.push_back(TrackEntry(bbox));
+				m_bBoxes.push_back(bbox);
 		}
 	}
 	

@@ -21,19 +21,21 @@ class Config;
 /// representation for a blob (detected geometric moving object) in the track vector 
 class TrackEntry {
 public:
-	TrackEntry(int x = 0, int y = 0, int width = 100, int height = 50);
-	TrackEntry(cv::Rect rect);
+	// TODO DELETE TrackEntry(int x = 0, int y = 0, int width = 100, int height = 50);
+	TrackEntry(cv::Rect rect, cv::Point2d velocity);
 	
     cv::Point2i centroid() const;
     int height() const;
     cv::Rect rect() const;
+	cv::Point2i velocity() const;
     int width() const;
 
     bool isClose(const TrackEntry& teCompare, const int maxDist);
     bool isSizeSimilar(const TrackEntry& teCompare, const double maxDeviation);
 private:
-	cv::Rect m_bbox;
+	cv::Rect	m_bbox;
 	cv::Point2i m_centroid;
+	cv::Point2d m_velocity;
 };
 
 
@@ -45,13 +47,13 @@ public:
 	/// construct track with initial track entry
 	/// \param[in] blob initial track entry
 	/// \param[in] id track ID
-    Track(const TrackEntry& blob, int id = 0);
+    Track(int id = 0);
 
 	/// assignment operator
 	Track& operator= (const Track& source);
 	
 	/// adds motion detection to track
-	void addTrackEntry(const TrackEntry& blob, cv::Size roi);
+	void addTrackEntry(cv::Rect& blob, const cv::Size roi);
 
 	/// adds substitute motion detection, extrapolating from prevoius size and velocity
 	void addSubstitute(cv::Size roi);
@@ -112,7 +114,7 @@ public:
 	/// \param[in] maxConf maximum value for confidence of track
 	/// \param[in] maxDeviation maximum allowed deviation in % of width and height for new motion detection
 	/// \param[in] maxDist maximum distance in pixels of new motion detection
-	void updateTrack(std::list<TrackEntry>& blobs, cv::Size roi, int maxConf, 
+	void updateTrack(std::list<cv::Rect>& blobs, cv::Size roi, int maxConf, 
 		double maxDeviation, double maxDist);
 	
 	/// update track based on blob intersection
@@ -121,10 +123,10 @@ public:
 	/// \param[in] minInter necessary percentage of intersection between track
 	///  and new detected blob (0 ... 1 = 100% of new detected blob)
 	/// \param[in] maxConf maximum value for confidence of track
-	void updateTrackIntersect(std::list<TrackEntry>& blobs, cv::Size roi, double minInter = 0.5, int maxConf = 2);
+	void updateTrackIntersect(std::list<cv::Rect>& blobs, cv::Size roi, double minInter = 0.5, int maxConf = 2);
 
 private:
-	cv::Point2d m_avgVelocity;
+	cv::Point2d				m_avgVelocity;
 	int						m_confidence;
 	bool					m_counted;
 	std::vector<TrackEntry> m_history; // dimension: time
@@ -185,10 +187,10 @@ public:
 
 	/// updates tracks with new motion objects
 	/// returns pointer to updated track list
-    std::list<Track>* updateTracks(std::list<TrackEntry>& blobs);
+    std::list<Track>* updateTracks(std::list<cv::Rect>& blobs);
 
 	/// update tracks with new intersection method
-	std::list<Track>* updateTracksIntersect(std::list<TrackEntry>& blobs, long long frameCnt);
+	std::list<Track>* updateTracksIntersect(std::list<cv::Rect>& blobs, long long frameCnt);
 	
 	// DEBUG
 	void inspect(int frameCnt);
@@ -208,7 +210,7 @@ private:
 	std::list<Track>		m_tracks;
 	std::list<int>			m_trackIDs;
 
-	void assignBlobs(std::list<TrackEntry>& blobs);
+	void assignBlobs(std::list<cv::Rect>& blobs);
 	
 	/// for_each track set status variable m_leavingRoiTo to left or right,
 	///  indicating that the track has touched left or right border of roi

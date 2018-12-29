@@ -120,7 +120,7 @@ class FrameHandler : public Observer {
 public:
 	FrameHandler(Config* pConfig);
 	void					adjustFrameSizeDependentParams(int new_size_x, int new_size_y); 
-	std::list<TrackEntry>&	calcBBoxes();
+	std::list<cv::Rect>&	calcBBoxes();
 	Inset					createInset(std::string insetFilePath);
 	int						getFrameInfo(); // #channels, depth, type
 	cv::Size2d				getFrameSize();
@@ -140,7 +140,7 @@ private:
 	// as of opencv 3.0 call createBackgroundSubtractorMOG2() in order to create instance
 	// function returns smart pointer to instance
 	typedef cv::Ptr<cv::BackgroundSubtractorMOG2> PtrBgrndSubtr;
-	std::list<TrackEntry>		m_bBoxes; // bounding boxes of newly detected objects
+	std::list<cv::Rect>		m_bBoxes; // bounding boxes of newly detected objects
 	struct AreaLimits {
 		int min;
 		int max; }				m_blobArea;
