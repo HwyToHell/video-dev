@@ -33,7 +33,7 @@ bool waitForEnter();
 
 
 
-int main(int argc, char* argv[]) {
+int main_png(int argc, char* argv[]) {
 	using namespace std;
 	//string path320("D:/Users/Holger/counter/traffic320x240/");
 	//string path640("D:/Users/Holger/counter/traffic640x480_low_pass/");

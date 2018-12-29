@@ -92,6 +92,9 @@ public:
 	/// returns true, if track has been marked for deletion in next update step
 	bool isMarkedForDelete();
 
+	/// returns true, if track is occluded by another track
+	bool isOccluded();
+
 	/// returns true, if track velocity in x direction has changed sign
 	bool isReversingX();
 
@@ -100,6 +103,9 @@ public:
 
 	/// set counted status
 	void setCounted(bool state);
+
+	/// set occluded status
+	void setOccluded(bool state);
 
 	/// update track depending on size and distance of motion detection
 	/// \param[in] blobs new unassigned motion detections
@@ -119,19 +125,25 @@ public:
 
 private:
 	cv::Point2d m_avgVelocity;
-	int m_confidence;
-	bool m_counted;
+	int						m_confidence;
+	bool					m_counted;
 	std::vector<TrackEntry> m_history; // dimension: time
-	int m_id;
-	bool m_isMarkedForDelete;
-	Direction m_leavingRoiTo;
-	cv::Point2d m_prevAvgVelocity;
+	int						m_id;
+	bool					m_isMarkedForDelete;
+	Direction				m_leavingRoiTo;
+	bool					m_isOccluded;
+	cv::Point2d				m_prevAvgVelocity;
 
 	cv::Point2d& updateAverageVelocity(cv::Size roi);
 };
 
-/// recorder.h
-//class CountRecorder;
+/// overlapping tracks
+struct Occlusion {
+	Track*		movingLeft;
+	Track*		movingRight;
+	cv::Rect	rect;
+	int			remainingUpdateSteps;
+};
 
 
 /// collection of all tracks, updates them based on the moving blobs from new frame:
@@ -146,8 +158,15 @@ public:
 	// TODO reserved for later implementation of data base 
 	void attachCountRecorder(CountRecorder* pRecorder);
 
+	// TODO make private in final version
+	/// set isOccluded flag for each occluded track, calculates occlusion rectangle
+	std::list<Occlusion>* checkOcclusion();
+
 	/// simple classifcation of vehicles based on length and size
 	CountResults countVehicles(int frameCnt = 0);
+
+	/// at least two tracks overlap
+	bool isOverlappingTracks();
 
 	/// returns ID for new track, if max number of tracks not exceeded
 	int nextTrackID();
@@ -176,24 +195,24 @@ public:
 	// END DEBUG
 private:
 	// changeable parameters (at run-time)
-	ClassifyVehicle m_classify;
-	cv::Size m_roiSize;
-	int m_maxConfidence;
-	double m_maxDeviation;
-	double m_maxDist;
-	unsigned int m_maxNoIDs;
+	ClassifyVehicle			m_classify;
+	cv::Size				m_roiSize;
+	int						m_maxConfidence;
+	double					m_maxDeviation;
+	double					m_maxDist;
+	unsigned int			m_maxNoIDs;
 
 	// variables
-	CountRecorder* m_recorder; 
-	std::list<Track> m_tracks;
-	std::list<int> m_trackIDs;
+	CountRecorder*			m_recorder; 
+	std::list<Occlusion>	m_overlaps;
+	std::list<Track>		m_tracks;
+	std::list<int>			m_trackIDs;
 
 	void assignBlobs(std::list<TrackEntry>& blobs);
 	
 	/// for_each track set status variable m_leavingRoiTo to left or right,
 	///  indicating that the track has touched left or right border of roi
 	void checkTracksLeavingRoi();
-
 
 	void deleteReversingTracks();
 	
