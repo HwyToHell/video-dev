@@ -15,7 +15,9 @@ int main(int argc, char* argv[]){
 	av[0] = argv[0];
 	av[1] = cases.c_str();
 
+	//int result = Catch::Session().run(ac, av);
 	int result = Catch::Session().run(argc, argv);
+
 	
 	cout << "Press <enter> to continue" << endl;
 	string str;

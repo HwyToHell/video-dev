@@ -92,8 +92,23 @@ Track& Track::operator= (const Track& source) {
 
 cv::Point diffVelocity(cv::Rect& blob, Track* const track, const cv::Size roi);
 
+bool outsideRoi(const cv::Rect& rect, const cv::Size roi) {
+	if ( rect.x + rect.width <= 0 || rect.x > roi.width )
+		return true;
+	if ( rect.y + rect.height <= 0 || rect.y > roi.height )
+		return true;
+	return false;
+}
+
+
 /// add TrackEntry to history and update velocity
-void Track::addTrackEntry(cv::Rect& blob, const cv::Size roi) {
+bool Track::addTrackEntry(cv::Rect& blob, const cv::Size roi) {
+	
+	// don't add track entry, if blob is outside roi entirely
+	if (outsideRoi(blob, roi)) {
+		std::cerr << "addTrackEntry: blob outside roi" << std::endl;
+		return false;
+	}
 
 	// clip x, if blob exceeds roi
 	int leftEdge = blob.x;
@@ -112,29 +127,22 @@ void Track::addTrackEntry(cv::Rect& blob, const cv::Size roi) {
 
 	m_prevAvgVelocity = m_avgVelocity;
 	updateAverageVelocity(roi);
-	return;
+	return true;
 }
 
 /// create substitute TrackEntry, if no close blob available
-void Track::addSubstitute(cv::Size roi) {
+bool Track::addSubstitute(cv::Size roi) {
 	// take average velocity and compose bbox from previous element
 	cv::Point2i velocity((int)round(m_avgVelocity.x), (int)round(m_avgVelocity.y));
 	cv::Rect substitute = getActualEntry().rect() + velocity;
 
 	// TODO: use Track::avgHeight, avgWidth
 
-	// clip x, if outside roi
-	if (substitute.x < 0) {
-		substitute.width = substitute.width + substitute.x;
-		substitute.x = 0;
-	}
-	int xClipRight = substitute.x + substitute.width - roi.width;
-	if (xClipRight > 0) {
-		substitute.width = substitute.width - xClipRight;
-	}
-	
-	addTrackEntry(substitute, roi);
-	return;
+	// roi check and clipping done in addTrackEntry
+	if (addTrackEntry(substitute, roi))
+		return true;
+	else
+		return false;
 }
 
 cv::Point diffVelocity(cv::Rect& blob, Track* const track, const cv::Size roi) {
@@ -310,14 +318,14 @@ cv::Point2d& Track::updateAverageVelocity(cv::Size roi) {
 	// need at least two track entries in order to calculate velocity
 	if (lengthHistory > 1) {
 		int idxMax = lengthHistory - 1;
-		cv::Point2d actVelocity = m_history[idxMax].velocity();// - m_history[idxMax-1].velocity();
+		cv::Point2d actVelocity = m_history[idxMax].velocity();
 	
 		// moving average formula
 		if (idxMax <= window) { // window not fully populated yet
 			m_avgVelocity = (m_avgVelocity * (double)(idxMax - 1) + actVelocity) * (1.0 / (double)(idxMax));
 		}
 		else { // window fully populated, remove window-1 velocity value
-			cv::Point2d oldVelocity = m_history[idxMax-window].velocity();// - m_history[idxMax-window-1].centroid();
+			cv::Point2d oldVelocity = m_history[idxMax-window].velocity();
 			m_avgVelocity += (actVelocity - oldVelocity) * (1.0 / (double)window);
 		}
 	}
@@ -645,8 +653,8 @@ void discardMatchingBlobs(Occlusion& occ, std::list<cv::Rect>& blobs) {
 	std::list<cv::Rect>::iterator iBlob = blobs.begin();
 	while (iBlob != blobs.end()) {
 		// blob predominantly within occlusion area -> erase
-		if ( (occ.rect.area() & iBlob->area()) > 
-			static_cast<int>(0.8 * iBlob->area()) ) {
+		cv::Rect intersect = occ.rect & *iBlob;
+		if (intersect.area() > static_cast<int>(0.8 * iBlob->area()) ) {
 				iBlob = blobs.erase(iBlob);
 		} else {
 			++iBlob;
@@ -814,8 +822,8 @@ bool isNextUpdateOccluded(Track& mvLeft, Track& mvRight) {
 
 	// set threshold for distNext in order to compensate for shaky velocity
 	int velocitySum = static_cast<int>(round(abs(mvLeft.getVelocity().x) + mvRight.getVelocity().x) );
-
-	if (distCurr > 0 && distNext <= 0)
+	int threshold = velocitySum / 2;
+	if (distCurr > 0 && distNext <= 2)
 		return true;
 	else
 		return false;
@@ -846,42 +854,47 @@ std::list<Occlusion>*  SceneTracker::checkOcclusion() {
 
 	// for_each track
 	while (iTrack != m_tracks.end()) {
-		// assing compare track to next list element
-		TiterTracks iTrackComp = iTrack;
-		++iTrackComp;
-
-		// for_each remaining tracks in list
-		while (iTrackComp != m_tracks.end()) {
-			if (isDirectionOpposite(*iTrack, *iTrackComp, 0.5)) {
-				
-				// determine left and right moving track
-				Track& movesRight = *iTrack;
-				Track& movesLeft = *iTrackComp;
-				if (signBit(iTrack->getVelocity().x)) {
-					movesLeft = *iTrack;
-					movesRight = *iTrackComp;
-				} else {
-					movesLeft = *iTrackComp;
-					movesRight = *iTrack;
-				}
-
-				if (isNextUpdateOccluded(movesLeft, movesRight)) {
-					Occlusion occ;
-					occ.remainingUpdateSteps = remainingOccludedUpdateSteps(movesLeft, movesRight);
-					occ.rect = occludedArea(movesLeft, movesRight, occ.remainingUpdateSteps); 
-					occ.movingLeft = &movesLeft;
-					occ.movingRight = &movesRight;
-					
-					// create occlusion list entry
-					m_overlaps.push_back(occ);
-
-					// mark tracks as occluded
-					movesLeft.setOccluded(true);
-					movesRight.setOccluded(true);
-				}
-			} // end_if isDirectionOpposite
+		// check only for tracks, that are not occluded
+		if (!iTrack->isOccluded()) {
+			// assing compare track to next list element
+			TiterTracks iTrackComp = iTrack;
 			++iTrackComp;
-		} // end_for_each remaining tracks in list
+
+			// for_each remaining tracks in list
+			while (iTrackComp != m_tracks.end()) {
+				if (!iTrackComp->isOccluded()) {
+					if (isDirectionOpposite(*iTrack, *iTrackComp, 0.5)) {
+				
+						// determine left and right moving track
+						Track& movesRight = *iTrack;
+						Track& movesLeft = *iTrackComp;
+						if (signBit(iTrack->getVelocity().x)) {
+							movesLeft = *iTrack;
+							movesRight = *iTrackComp;
+						} else {
+							movesLeft = *iTrackComp;
+							movesRight = *iTrack;
+						}
+
+						if (isNextUpdateOccluded(movesLeft, movesRight)) {
+							Occlusion occ;
+							occ.remainingUpdateSteps = remainingOccludedUpdateSteps(movesLeft, movesRight);
+							occ.rect = occludedArea(movesLeft, movesRight, occ.remainingUpdateSteps); 
+							occ.movingLeft = &movesLeft;
+							occ.movingRight = &movesRight;
+					
+							// create occlusion list entry
+							m_overlaps.push_back(occ);
+
+							// mark tracks as occluded
+							movesLeft.setOccluded(true);
+							movesRight.setOccluded(true);
+						}
+					} // end_if isDirectionOpposite
+				} // end_if track opposite is not occluded
+				++iTrackComp;
+			} // end_for_each remaining tracks in list
+		} // end_if track is not occluded
 
 		++iTrack;
 	} // end_for_each track
@@ -957,6 +970,23 @@ void SceneTracker::checkTracksLeavingRoi() {
 }
 
 
+void SceneTracker::deleteMarkedTracks() {
+	// delete orphaned tracks and free associated Track-ID
+	typedef std::list<Track>::iterator TiterTracks;
+	TiterTracks iTrack = m_tracks.begin();
+
+	while (iTrack != m_tracks.end()) {
+		if (iTrack->isMarkedForDelete()) {
+			returnTrackID(iTrack->getId());
+			iTrack = m_tracks.erase(iTrack);
+		} else {
+			++iTrack;
+		}
+	}
+	return;
+}
+
+
 // for reversing tracks:
 // delete reversing tracks and assign last entry to new track
 void SceneTracker::deleteReversingTracks() {
@@ -990,22 +1020,9 @@ void SceneTracker::deleteReversingTracks() {
 }
 
 
-void SceneTracker::deleteMarkedTracks() {
-	// delete orphaned tracks and free associated Track-ID
-	typedef std::list<Track>::iterator TiterTracks;
-	TiterTracks iTrack = m_tracks.begin();
-
-	while (iTrack != m_tracks.end()) {
-		if (iTrack->isMarkedForDelete()) {
-			returnTrackID(iTrack->getId());
-			iTrack = m_tracks.erase(iTrack);
-		} else {
-			++iTrack;
-		}
-	}
-	return;
+std::list<Occlusion>* SceneTracker::overlaps() {
+	return &m_overlaps;
 }
-
 
 // DEBUG
 struct Trk {

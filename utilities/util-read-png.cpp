@@ -311,9 +311,21 @@ bool trackImageSequence(SceneTracker* pScene, std::string directory, std::string
 
 		std::list<Track>* pDebugTracks;
 		pDebugTracks = pScene->updateTracksIntersect(motionRectList, start);
-		// DEBUG
+
 		cv::Mat tracks(input.size(), CV_8UC3, black);
+		// show tracks
 		printTrackUpdate(tracks, pDebugTracks);
+
+		// show occlusion
+		if (pScene->isOverlappingTracks()) {
+			std::list<Occlusion>* pOcc = pScene->overlaps();
+			std::list<Occlusion>::iterator iOcc = pOcc->begin();
+			while (iOcc != pOcc->end()) {
+				cv::rectangle(tracks, iOcc->rect, white);
+				++iOcc;
+			}
+		}
+
 
 		if (isManual) {
 			cv::imshow("debug", debug);
@@ -325,7 +337,7 @@ bool trackImageSequence(SceneTracker* pScene, std::string directory, std::string
 			cv::imwrite(filePath, tracks);
 		}
 
-		std::cout << "frame: " << start << " SPACE to continue, ESC to break" << std::endl;
+		std::cout << "frame: " << start << " SPACE to continue, ESC to break" << std::endl << std::endl;
 		if (cv::waitKey(0) == 27) {
 			std::cout << "ESC pressed -> end sequence" << std::endl;
 			break;

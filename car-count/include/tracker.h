@@ -53,13 +53,10 @@ public:
 	Track& operator= (const Track& source);
 	
 	/// adds motion detection to track
-	void addTrackEntry(cv::Rect& blob, const cv::Size roi);
+	bool addTrackEntry(cv::Rect& blob, const cv::Size roi);
 
 	/// adds substitute motion detection, extrapolating from prevoius size and velocity
-	void addSubstitute(cv::Size roi);
-
-	/// set flag if track is about leaving roi area
-	void setLeavingRoiFlag(cv::Size roi);
+	bool addSubstitute(cv::Size roi);
 	
 	// TODO delete
 	void checkPosAndDir(); 
@@ -105,6 +102,9 @@ public:
 
 	/// set counted status
 	void setCounted(bool state);
+
+	/// set flag if track is about leaving roi area
+	void setLeavingRoiFlag(cv::Size roi);
 
 	/// set occluded status
 	void setOccluded(bool state);
@@ -172,6 +172,9 @@ public:
 
 	/// returns ID for new track, if max number of tracks not exceeded
 	int nextTrackID();
+
+	// TODO delete
+	std::list<Occlusion>* overlaps();
 
 	// TODO delete
 	void printVehicles();
