@@ -127,6 +127,9 @@ bool Track::addTrackEntry(cv::Rect& blob, const cv::Size roi) {
 
 	m_prevAvgVelocity = m_avgVelocity;
 	updateAverageVelocity(roi);
+
+	setLeavingRoiFlag(roi);
+
 	return true;
 }
 
@@ -232,16 +235,12 @@ bool Track::isMarkedForDelete() {return m_isMarkedForDelete;}
 
 bool Track::isOccluded() {return m_isOccluded;}
 
-bool Track::isReversingX() {
+bool Track::isReversingX(const double backlash) {
 
 	// track history must have at least two elements in order to
 	// compare velocity and determine direction
 	if (this->getHistory() >= 3) {
 		
-		// velocity difference must be significant in order to 
-		// avoid re-assigning tracks of stand still motion, e.g. waving leaves
-		const double backlash = 0.5;
-
 		// previous direction different than current
 		if (signBit(m_prevAvgVelocity.x) != signBit(m_avgVelocity.x)) {
 			// at least one velocity must be outside backlash
@@ -272,11 +271,11 @@ void Track::markForDeletion() {
 
 void Track::setCounted(bool state) { m_counted = state; }
 
-void Track::setLeavingRoiFlag(cv::Size roi) {
+Track::Direction Track::setLeavingRoiFlag(cv::Size roi) {
 
 	// reliable velocity necessary, so only longer tracks are considered 
 	// once leavingRoiTo has been assigned, no re-calculation necessary
-	if ( (this->getHistory() > 4) && (m_leavingRoiTo == Direction::none) ) {
+	if ( (this->getHistory() >= 4) && (m_leavingRoiTo == Direction::none) ) {
 
 		int borderTolerance = roi.width * 5 / 100;
 
@@ -304,7 +303,7 @@ void Track::setLeavingRoiFlag(cv::Size roi) {
 		} // end_if track movement
 	} // end_if assign leavingRoiTo
 
-	return;
+	return m_leavingRoiTo;
 }
 
 
@@ -725,9 +724,6 @@ std::list<Track>* SceneTracker::updateTracksIntersect(std::list<cv::Rect>& blobs
 	//3 delete tracks
 	this->deleteMarkedTracks();
 
-	//4 check leaving roi
-	this->checkTracksLeavingRoi();
-
 	//5 check reversing direction
 	// delete relevant tracks (blobs will be assigned to new track in next update step)
 	this->deleteReversingTracks();
@@ -953,23 +949,6 @@ void combineTracks(std::list<Track>& tracks, cv::Size roi) {
 }
 
 
-/// for_each track set status variable m_leavingRoiTo to left or right,
-///  indicating that the track has touched left or right border of roi
-void SceneTracker::checkTracksLeavingRoi() {
-	typedef std::list<Track>::iterator TiterTracks;
-	TiterTracks iTrack = m_tracks.begin();
-
-	// for_each track
-	while (iTrack != m_tracks.end()) {
-
-		iTrack->setLeavingRoiFlag(m_roiSize);
-		++iTrack;
-	} // end_for_each track
-
-	return;
-}
-
-
 void SceneTracker::deleteMarkedTracks() {
 	// delete orphaned tracks and free associated Track-ID
 	typedef std::list<Track>::iterator TiterTracks;
@@ -990,13 +969,17 @@ void SceneTracker::deleteMarkedTracks() {
 // for reversing tracks:
 // delete reversing tracks and assign last entry to new track
 void SceneTracker::deleteReversingTracks() {
+	// velocity difference must be significant in order to 
+	// avoid re-assigning tracks of stand still motion, e.g. waving leaves
+	const double backlash = 0.5;
+
 	typedef std::list<Track>::iterator TiterTracks;
 	TiterTracks iTrack = m_tracks.begin();
 
 	// for_each track
 	while (iTrack != m_tracks.end()) {
 		// track reverses
-		if(iTrack->isReversingX()) { //&& (iTrack->leavingRoiTo() != Track::Direction::none)) {
+		if(iTrack->isReversingX(backlash)) { 
 			int id = this->nextTrackID();
 
 			// if trackID available: create new track from lastTrackEntry, delete reversing track

@@ -95,7 +95,7 @@ public:
 	bool isOccluded();
 
 	/// returns true, if track velocity in x direction has changed sign
-	bool isReversingX();
+	bool isReversingX(const double backlash = 0.5);
 
 	/// mark track for deletion
 	void markForDeletion();
@@ -104,7 +104,8 @@ public:
 	void setCounted(bool state);
 
 	/// set flag if track is about leaving roi area
-	void setLeavingRoiFlag(cv::Size roi);
+	/// (e.g. track moves to right and touches right border of roi)
+	Direction setLeavingRoiFlag(cv::Size roi);
 
 	/// set occluded status
 	void setOccluded(bool state);
@@ -215,10 +216,6 @@ private:
 
 	void assignBlobs(std::list<cv::Rect>& blobs);
 	
-	/// for_each track set status variable m_leavingRoiTo to left or right,
-	///  indicating that the track has touched left or right border of roi
-	void checkTracksLeavingRoi();
-
 	void deleteReversingTracks();
 	
 	void deleteMarkedTracks();

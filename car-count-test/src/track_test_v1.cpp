@@ -1,13 +1,6 @@
 #include "stdafx.h"
 #include "D:/Holger/app-dev/video-dev/car-count/include/config.h" // includes tracker.h
 
-
-///////////////////////////////////////////////////////////////////////////////
-// TrackEntry 
-///////////////////////////////////////////////////////////////////////////////
-
-
-
 ///////////////////////////////////////////////////////////////////////////////
 // Track 
 ///////////////////////////////////////////////////////////////////////////////
@@ -16,6 +9,7 @@ TEST_CASE( "#id001 getId", "[Track]" ) {
 	Track track(1);
 	REQUIRE(track.getId() == 1);
 }
+
 
 
 TEST_CASE( "#vel001 addTrackEntry: blob smaller than roi width", "[Track]" ) {
@@ -109,12 +103,47 @@ TEST_CASE("#vel003 addSubstitute: compose from previous TrackEntry", "[Track]") 
 }
 
 
-TEST_CASE("#upd001 updateTrack: intersection", "[Track]") {
-	// track populated with one entry
+TEST_CASE("#vel004 isReversingX: no change within backlash", "[Track]") {
+	// track with 3 updates: 
+	// velocity n-1 = 10; velocity n = -1 
 	using namespace std;
 	Track track(1);
 	cv::Size roi(100,100);
+	cv::Size blobSize(10,10);
+	cv::Point blobOrigin(50,0);
+	int velocity = 10;
 
+	// 1st
+	cv::Rect blob(blobOrigin, blobSize);
+	track.addTrackEntry(blob, roi);
+	// 2nd - velocityX = 10
+	blobOrigin.x += velocity;
+	blob = cv::Rect(blobOrigin, blobSize);
+	track.addTrackEntry(blob, roi);
+	// 3rd - velocityX = -1
+	blobOrigin.x -= (velocity*12/10);
+	blob = cv::Rect(blobOrigin, blobSize);
+	track.addTrackEntry(blob, roi);
+	//cout << "vel3: " << track.getVelocity() << endl;
+
+	SECTION("both velocity within backlash -> no reversion detected") {
+		double backlash = 10;
+		REQUIRE( false == track.isReversingX(backlash));
+	}
+
+	SECTION("one velocity outside backlash -> is reversing") {
+		double backlash = 0.5;
+		REQUIRE( true == track.isReversingX(backlash));
+	}
+}
+	
+
+
+TEST_CASE("#upd001 updateTrack: intersection", "[Track]") {
+	// track with two entries, moving to right with velocityX = 10
+	using namespace std;
+	Track track(1);
+	cv::Size roi(100,100);
 	cv::Size blobSize(10,10);
 	cv::Point blobOrigin(50,50);
 
@@ -266,6 +295,65 @@ TEST_CASE("#upd003 updateTrack: confidence in- and decrease", "[Track]") {
 				REQUIRE( 0 == track.getConfidence() );
 				REQUIRE( true == track.isMarkedForDelete() );
 			}
+		}
+	}
+}
+
+
+TEST_CASE("#upd004 setLeavingRoiFlag: depending on direction and position of blob", "[Track]") {
+	// start with empty track, in each section 4 or more updates are necessary
+	using namespace std;
+	Track track(1);
+	cv::Size roi(100,100);
+	cv::Size blobSize(40,10);
+	int nUpdates = 4;
+
+	SECTION("leaving roi to right") {
+		int velocityX = 10;
+		cv::Point blobOrigin(roi.width - blobSize.width - velocityX*(nUpdates+1), 0);
+		cv::Rect blob(blobOrigin, blobSize);
+		// right border after 4 updates = 90 (roi width not reached yet)
+		for (int i=1; i<=nUpdates; ++i) {
+			blobOrigin.x += velocityX;
+			blob = cv::Rect(blobOrigin, blobSize);
+			track.addTrackEntry(blob, roi);
+			//cout << blob << endl;
+		}
+
+		SECTION("right border not reached -> direction: none") {
+			REQUIRE( Track::Direction::none == track.leavingRoiTo() );
+		}
+
+		SECTION("right border reached -> direction: right") {
+			blobOrigin.x += velocityX;
+			blob = cv::Rect(blobOrigin, blobSize);
+			cout << blob << endl;
+			track.addTrackEntry(blob, roi);
+			REQUIRE( Track::Direction::right == track.leavingRoiTo() );
+		}
+	}
+
+	SECTION("leaving roi to left") {
+		int velocityX = -10;
+		cv::Point blobOrigin(abs(velocityX)*(nUpdates+1), 0);
+		cv::Rect blob(blobOrigin, blobSize);
+		// left border after 4 updates = 10 (roi width not reached yet)
+		for (int i=1; i<=nUpdates; ++i) {
+			blobOrigin.x += velocityX;
+			blob = cv::Rect(blobOrigin, blobSize);
+			track.addTrackEntry(blob, roi);
+			//cout << blob << endl;
+		}
+
+		SECTION("left border not reached -> direction: none") {
+			REQUIRE( Track::Direction::none == track.leavingRoiTo() );
+		}
+
+		SECTION("left border reached -> direction: right") {
+			blobOrigin.x += velocityX;
+			blob = cv::Rect(blobOrigin, blobSize);
+			track.addTrackEntry(blob, roi);
+			REQUIRE( Track::Direction::left == track.leavingRoiTo() );
 		}
 	}
 }
