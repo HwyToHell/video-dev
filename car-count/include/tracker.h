@@ -158,6 +158,8 @@ public:
 	/// \param[in] pConfig pointer to configuration object, containing changeable parameters
 	SceneTracker(Config* pConfig);
 
+	std::list<Track>* assignBlobs(std::list<cv::Rect>& blobs);
+
 	// TODO reserved for later implementation of data base 
 	void attachCountRecorder(CountRecorder* pRecorder);
 
@@ -167,6 +169,8 @@ public:
 
 	/// simple classifcation of vehicles based on length and size
 	CountResults countVehicles(int frameCnt = 0);
+
+	std::list<Track>* deleteMarkedTracks();
 
 	/// at least two tracks overlap
 	bool isOverlappingTracks();
@@ -214,9 +218,14 @@ private:
 	std::list<Track>		m_tracks;
 	std::list<int>			m_trackIDs;
 
-	void assignBlobs(std::list<cv::Rect>& blobs);
+	// TODO DELETE void assignBlobs(std::list<cv::Rect>& blobs);
 	
 	void deleteReversingTracks();
 	
-	void deleteMarkedTracks();
+	// TODO DELETE void deleteMarkedTracks();
 };
+
+/// combine tracks that have
+///		same direction and area intersection
+/// assign smaller tracks to longer ones
+std::list<Track>* combineTracks(std::list<Track>& tracks, cv::Size roi);

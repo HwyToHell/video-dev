@@ -327,7 +327,7 @@ TEST_CASE("#upd004 setLeavingRoiFlag: depending on direction and position of blo
 		SECTION("right border reached -> direction: right") {
 			blobOrigin.x += velocityX;
 			blob = cv::Rect(blobOrigin, blobSize);
-			cout << blob << endl;
+			//cout << blob << endl;
 			track.addTrackEntry(blob, roi);
 			REQUIRE( Track::Direction::right == track.leavingRoiTo() );
 		}

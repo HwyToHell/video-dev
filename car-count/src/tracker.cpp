@@ -644,9 +644,6 @@ std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs) {
 }
 
 
-void combineTracks(std::list<Track>& tracks, cv::Size roi);
-
-
 void discardMatchingBlobs(Occlusion& occ, std::list<cv::Rect>& blobs) {
 	// for_each blob
 	std::list<cv::Rect>::iterator iBlob = blobs.begin();
@@ -743,7 +740,7 @@ std::list<Track>* SceneTracker::updateTracksIntersect(std::list<cv::Rect>& blobs
 }
 
 
-void SceneTracker::assignBlobs(std::list<cv::Rect>& blobs) {
+std::list<Track>* SceneTracker::assignBlobs(std::list<cv::Rect>& blobs) {
 	// assign blobs to existing tracks
 	// delete orphaned tracks and free associated Track-ID
 	//  for_each track
@@ -770,7 +767,7 @@ void SceneTracker::assignBlobs(std::list<cv::Rect>& blobs) {
 		++iBlob;
 	}
 	blobs.clear();
-	return;
+	return &m_tracks;
 }
 
 // at least one track should move relatively fast
@@ -899,7 +896,7 @@ std::list<Occlusion>*  SceneTracker::checkOcclusion() {
 }
 
 
-void combineTracks(std::list<Track>& tracks, cv::Size roi) {
+std::list<Track>* combineTracks(std::list<Track>& tracks, cv::Size roi) {
 	// combine tracks, if they have
 	//   same direction and
 	//   area intersection
@@ -945,11 +942,11 @@ void combineTracks(std::list<Track>& tracks, cv::Size roi) {
 
 		++iTrack;
 	} // end_for_each track
-	return;
+	return &tracks;
 }
 
 
-void SceneTracker::deleteMarkedTracks() {
+std::list<Track>* SceneTracker::deleteMarkedTracks() {
 	// delete orphaned tracks and free associated Track-ID
 	typedef std::list<Track>::iterator TiterTracks;
 	TiterTracks iTrack = m_tracks.begin();
@@ -962,7 +959,7 @@ void SceneTracker::deleteMarkedTracks() {
 			++iTrack;
 		}
 	}
-	return;
+	return &m_tracks;
 }
 
 
