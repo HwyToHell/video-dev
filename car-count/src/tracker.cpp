@@ -16,7 +16,7 @@ double round(double number) // not necessary in C++11
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// TrackEntry ////////////////////////////////////////////////////////////////
+// TrackEntry
 //////////////////////////////////////////////////////////////////////////////
 
 /* TODO DELETE
@@ -816,7 +816,7 @@ bool isNextUpdateOccluded(Track& mvLeft, Track& mvRight) {
 	// set threshold for distNext in order to compensate for shaky velocity
 	int velocitySum = static_cast<int>(round(abs(mvLeft.getVelocity().x) + mvRight.getVelocity().x) );
 	int threshold = velocitySum / 2;
-	if (distCurr > 0 && distNext <= 2)
+	if (distCurr > 0 && distNext < threshold)
 		return true;
 	else
 		return false;
@@ -965,7 +965,7 @@ std::list<Track>* SceneTracker::deleteMarkedTracks() {
 
 // for reversing tracks:
 // delete reversing tracks and assign last entry to new track
-void SceneTracker::deleteReversingTracks() {
+std::list<Track>* SceneTracker::deleteReversingTracks() {
 	// velocity difference must be significant in order to 
 	// avoid re-assigning tracks of stand still motion, e.g. waving leaves
 	const double backlash = 0.5;
@@ -996,7 +996,7 @@ void SceneTracker::deleteReversingTracks() {
 		}
 	} // end_for_each track
 
-	return;
+	return &m_tracks;
 }
 
 

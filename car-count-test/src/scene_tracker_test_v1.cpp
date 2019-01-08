@@ -224,3 +224,142 @@ TEST_CASE("#del001 deleteMarkedTracks", "[SCENE]") {
 	}
 
 }
+
+
+TEST_CASE("#del002 deleteReversingTracks", "[SCENE]") {
+// config with two tracks, #1 reversing, #2 not reversing
+	using namespace std;
+	Config config;	
+	Config* pConfig = &config;
+	config.setParam("roi_width", "100");
+	config.setParam("roi_height", "100");
+	SceneTracker scene(pConfig);
+
+	cv::Size size(40,10);
+	cv::Point origin(0,0);
+	cv::Point velocity(10,0);
+	cv::Rect reversing(origin, size);
+	cv::Rect monotonic(origin + cv::Point(0,50), size);
+
+	list<cv::Rect> blobs;
+	list<Track>* pTracks;
+
+	// 1st and 2nd with velocity 10
+	for (int i=1; i<=2; ++i) {
+		reversing += velocity;
+		monotonic += velocity;
+		blobs.push_back(reversing);
+		blobs.push_back(monotonic);
+		scene.assignBlobs(blobs);
+		//cout << reversing << endl;
+	}
+
+	// 3rd reversing -12, 3rd monotonic +10
+	reversing -= (velocity*12/10);
+	monotonic += velocity;
+	blobs.push_back(reversing);
+	blobs.push_back(monotonic);
+	pTracks = scene.assignBlobs(blobs);
+	//cout << reversing << endl;
+	
+	SECTION("delete reversing track and create new one from last track entry") {
+		// first track: #1 before deleting
+		REQUIRE( 1 == pTracks->front().getId() );
+		REQUIRE( 2 == pTracks->size() );
+		cv::Rect lastTrackEntry = pTracks->front().getActualEntry().rect();
+
+		// first track: appended as #3 after deleting, matches last track entry
+		pTracks = scene.deleteReversingTracks();
+		REQUIRE( 3 == pTracks->back().getId());
+		REQUIRE( 2 == pTracks->size() );
+		REQUIRE( lastTrackEntry == pTracks->back().getActualEntry().rect() );
+	}
+}
+
+
+TEST_CASE("#occ001 isDirectionOpposite", "[SCENE]") {
+	// two tracks moving into opposite direction
+	using namespace std;
+	Track right(1);
+	Track left(2);		
+	cv::Size roi(100,100);
+
+	cv::Size size(20,10);
+	cv::Point orgRight(0,0);
+	cv::Point orgLeft(80,0);
+	cv::Point velocity(5,0);
+	int nUpdates = 3;
+	
+	cv::Rect rcRight(orgRight, size);
+	cv::Rect rcLeft(orgLeft, size);
+	for (int i=1; i<=nUpdates; ++i) {
+		rcRight += velocity;
+		rcLeft -= velocity;
+		right.addTrackEntry(rcRight, roi);
+		left.addTrackEntry(rcLeft, roi);
+	}
+	//cout << "velocity right: " << right.getVelocity() << " velocity left: " << left.getVelocity() << endl;
+
+	SECTION("direction opposite, velocity outside backlash -> is opposite") {
+		double backlash = 0.5;
+		REQUIRE( true == isDirectionOpposite(right, left, backlash) );
+	}
+
+	SECTION("direction opposite, velocity within backlash -> not opposite") {
+		double backlash = 10;
+		REQUIRE( false == isDirectionOpposite(right, left, backlash) );
+	}
+}
+
+
+TEST_CASE("#occ002 isNextUpdateOccluded", "[SCENE]") {
+	// two tracks moving into opposite direction
+	using namespace std;
+	Track right(1);
+	Track left(2);		
+	cv::Size roi(200,200);
+	cv::Size size(30,10);
+	cv::Point velocity(10,0);
+
+	// distance after next update = 0,5 * velocity -> another update step necessary
+	int distNextUpd = (velocity.x * 3) + 1;
+	int nUpdates = 3;
+
+	// final origin after nUpdates
+	cv::Point finLeft(100,0);
+	int finRightX = finLeft.x - distNextUpd - size.width;
+	cv::Point finRight(finRightX,0);
+
+	// origin before nUpdates
+	cv::Point orgLeft = finLeft + nUpdates * velocity;
+	cv::Point orgRight= finRight - nUpdates * velocity;
+	//cout << "left org: " << orgLeft << " fin: " << finLeft << endl;
+	//cout << "right org: " << orgRight << " fin: " << finRight << endl;	
+	
+	cv::Rect rcRight(orgRight, size);
+	cv::Rect rcLeft(orgLeft, size);
+	for (int i=1; i<=nUpdates; ++i) {
+		rcRight += velocity;
+		rcLeft -= velocity;
+		right.addTrackEntry(rcRight, roi);
+		left.addTrackEntry(rcLeft, roi);
+	}
+	
+	SECTION("distance after next update step larger than half velocity -> not occluded") {
+		//cout << right.getActualEntry().rect() << endl;
+		//cout << left.getActualEntry().rect() << endl;
+		REQUIRE( false == isNextUpdateOccluded(left, right) );
+	}
+
+	SECTION("distance after next update step smaller than half velocity -> is occluded") {
+		// do another update with track velocity
+		rcRight += velocity;
+		rcLeft -= velocity;
+		right.addTrackEntry(rcRight, roi);
+		left.addTrackEntry(rcLeft, roi);
+		//cout << right.getActualEntry().rect() << endl;
+		//cout << left.getActualEntry().rect() << endl;
+
+		REQUIRE( true == isNextUpdateOccluded(left, right) );
+	}
+}

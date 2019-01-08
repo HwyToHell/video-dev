@@ -158,6 +158,8 @@ public:
 	/// \param[in] pConfig pointer to configuration object, containing changeable parameters
 	SceneTracker(Config* pConfig);
 
+	/// assigns blobs to existing tracks with overlapping area,
+	/// creates new tracks for non-matching blobs
 	std::list<Track>* assignBlobs(std::list<cv::Rect>& blobs);
 
 	// TODO reserved for later implementation of data base 
@@ -170,7 +172,12 @@ public:
 	/// simple classifcation of vehicles based on length and size
 	CountResults countVehicles(int frameCnt = 0);
 
+	/// marked tracks are deleted
 	std::list<Track>* deleteMarkedTracks();
+
+	/// reversing tracks are deleted,
+	/// a new track is created from last track entry
+	std::list<Track>* deleteReversingTracks();
 
 	/// at least two tracks overlap
 	bool isOverlappingTracks();
@@ -218,14 +225,15 @@ private:
 	std::list<Track>		m_tracks;
 	std::list<int>			m_trackIDs;
 
-	// TODO DELETE void assignBlobs(std::list<cv::Rect>& blobs);
-	
-	void deleteReversingTracks();
-	
-	// TODO DELETE void deleteMarkedTracks();
 };
 
 /// combine tracks that have
-///		same direction and area intersection
+///	same direction and area intersection
 /// assign smaller tracks to longer ones
 std::list<Track>* combineTracks(std::list<Track>& tracks, cv::Size roi);
+
+/// velocityX of two tracks has different sign
+bool isDirectionOpposite(Track& track, Track& trackCompare, const double backlash);
+
+/// distance after next update step (with average velocity) shorter than half velocity 
+bool isNextUpdateOccluded(Track& mvLeft, Track& mvRight);
