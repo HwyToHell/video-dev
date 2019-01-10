@@ -363,3 +363,51 @@ TEST_CASE("#occ002 isNextUpdateOccluded", "[SCENE]") {
 		REQUIRE( true == isNextUpdateOccluded(left, right) );
 	}
 }
+
+
+TEST_CASE("#occ003 remainingOccludedUpdateSteps", "[SCENE]") {
+	// two tracks moving into opposite direction, next step in occlusion
+	using namespace std;
+	Track right(1);
+	Track left(2);		
+	cv::Size roi(200,200);
+	cv::Size size(30,10);
+	cv::Point velocity(10,0);
+
+	// distance after next update = 0,5 * velocity -> another update step necessary
+	int distNextUpd = velocity.x;
+	int nUpdates = 3;
+
+	// final origin after nUpdates
+	cv::Point finLeft(100,0);
+	int finRightX = finLeft.x - distNextUpd - size.width;
+	cv::Point finRight(finRightX,0);
+
+	// origin before nUpdates
+	cv::Point orgLeft = finLeft + nUpdates * velocity;
+	cv::Point orgRight= finRight - nUpdates * velocity;
+	//cout << "left org: " << orgLeft << " fin: " << finLeft << endl;
+	//cout << "right org: " << orgRight << " fin: " << finRight << endl;	
+	
+	cv::Rect rcRight(orgRight, size);
+	cv::Rect rcLeft(orgLeft, size);
+	for (int i=1; i<=nUpdates; ++i) {
+		rcRight += velocity;
+		rcLeft -= velocity;
+		right.addTrackEntry(rcRight, roi);
+		left.addTrackEntry(rcLeft, roi);
+	}
+	//cout << right.getActualEntry().rect() << endl;
+	//cout << left.getActualEntry().rect() << endl;
+
+	SECTION("distance after next update step smaller than half velocity -> is occluded") {
+		// steps in occlusion: (2 * size) / (2 * velocity)
+		int steps = (2 * size.width) / (2 * velocity.x);
+
+		//cout << right.getActualEntry().rect() << endl;
+		//cout << left.getActualEntry().rect() << endl;
+
+		REQUIRE( steps == remainingOccludedUpdateSteps(left, right) );
+	}
+
+}

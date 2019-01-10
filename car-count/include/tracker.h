@@ -179,7 +179,7 @@ public:
 	/// a new track is created from last track entry
 	std::list<Track>* deleteReversingTracks();
 
-	/// at least two tracks overlap
+	/// at least two tracks overlap, based on overlap regions
 	bool isOverlappingTracks();
 
 	/// returns ID for new track, if max number of tracks not exceeded
@@ -197,7 +197,7 @@ public:
 	/// returns motion objects that need to be classified by DNN
 	std::vector<TrackEntry>triggerDNNClassif();
 
-	/// updates observer with subject's parameters (Config is derived from Observer)
+	/// update observer's (SceneTracker) parameters from subject (Config)
 	void update();
 
 	/// updates tracks with new motion objects
@@ -232,8 +232,25 @@ private:
 /// assign smaller tracks to longer ones
 std::list<Track>* combineTracks(std::list<Track>& tracks, cv::Size roi);
 
+/// blobs inside occlusion rectangle are removed from list
+void discardMatchingBlobs(Occlusion& occ, std::list<cv::Rect>& blobs);
+
 /// velocityX of two tracks has different sign
 bool isDirectionOpposite(Track& track, Track& trackCompare, const double backlash);
 
 /// distance after next update step (with average velocity) shorter than half velocity 
 bool isNextUpdateOccluded(Track& mvLeft, Track& mvRight);
+
+/// return rectangle while tracks are occluded
+cv::Rect occludedArea(Track& mvLeft, Track& mvRight, int updateSteps);
+
+// DEBUG
+void printRect(Occlusion& occ);
+// END_DEBUG
+
+// DEBUG
+void printVelocity(Track& track);
+// END_DEBUG
+
+/// steps in occlusion, considering average velocities
+int remainingOccludedUpdateSteps(Track& mvLeft, Track& mvRight);
