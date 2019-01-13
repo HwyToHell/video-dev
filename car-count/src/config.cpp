@@ -30,10 +30,10 @@ bool Parameter::setValue(std::string& value) {
 	return true;
 }
 
-class ParamEquals : public unary_function<Parameter, bool> {
+class Param_eq : public unary_function<Parameter, bool> {
 	std::string mName;
 public: 
-	ParamEquals (const std::string& name) : mName(name) {}
+	Param_eq (const std::string& name) : mName(name) {}
 	bool operator() (const Parameter& par) const { 
 		return (mName == par.getName());
 	}
@@ -96,7 +96,7 @@ Config::~Config() {
 
 std::string Config::getParam(std::string name) {
 	using namespace	std;
-	list<Parameter>::iterator iParam = find_if(m_paramList.begin(), m_paramList.end(), ParamEquals(name));
+	list<Parameter>::iterator iParam = find_if(m_paramList.begin(), m_paramList.end(), Param_eq(name));
 	if (iParam == m_paramList.end()) {
 		cerr << "getParam: parameter not in config: " << name <<endl;
 		return string("");
@@ -602,7 +602,7 @@ void Config::setConfigProps(std::string configDirPath, std::string configFileNam
 
 bool Config::setParam(std::string name, std::string value) {
 	list<Parameter>::iterator iParam = find_if(m_paramList.begin(), m_paramList.end(),
-		ParamEquals(name));
+		Param_eq(name));
 	if (iParam == m_paramList.end())
 		return false;
 	iParam->setValue(value);

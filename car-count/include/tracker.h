@@ -31,7 +31,7 @@ public:
     int width() const;
 
     bool isClose(const TrackEntry& teCompare, const int maxDist);
-    bool isSizeSimilar(const TrackEntry& teCompare, const double maxDeviation);
+    bool isSizeSimilar(const TrackEntry& teCompare, const double maxDeviation) const;
 private:
 	cv::Rect	m_bbox;
 	cv::Point2i m_centroid;
@@ -53,34 +53,35 @@ public:
 	Track& operator= (const Track& source);
 	
 	/// adds motion detection to track
+	/// blob is clipped, if outside roi area (non-const parameter)
 	bool addTrackEntry(cv::Rect& blob, const cv::Size roi);
 
 	/// adds substitute motion detection, extrapolating from prevoius size and velocity
 	bool addSubstitute(cv::Size roi);
-	
+
 	// TODO delete
 	void checkPosAndDir(); 
 
 	/// returns motion object at current time (t)
-	TrackEntry& getActualEntry();
-
-	/// returns motion object from previous update step (t-1)
-	TrackEntry& getPreviousEntry();
+	const TrackEntry& getActualEntry() const;
 
 	/// returns track confidence (as measure of reliability)
-	int getConfidence();
+	int getConfidence() const;
 
 	/// returns history size
-	int getHistory();
+	int getHistory() const;
 
 	/// returns track ID
-	int getId();
+	int getId() const;
 
 	/// returns track length
-	double getLength();
+	double getLength() const;
+
+	/// returns motion object from previous update step (t-1)
+	const TrackEntry& getPreviousEntry() const;
 
 	/// returns velocity of movin object
-	cv::Point2d getVelocity();
+	cv::Point2d getVelocity() const;
 
 	/// returns true, if track has been counted already
 	bool isCounted();
@@ -140,6 +141,19 @@ private:
 	cv::Point2d& updateAverageVelocity(cv::Size roi);
 };
 
+
+/// find matching tracks by ID
+class TrackID_eq : public std::unary_function<Track, bool> {
+public: 
+	TrackID_eq (const int id) : m_ID(id) {}
+	inline bool operator() (const Track& track) const { 
+		return (m_ID == track.getId());
+	}
+private:
+	int m_ID;
+};
+
+
 /// overlapping tracks
 struct Occlusion {
 	Track*		movingLeft;
@@ -162,12 +176,15 @@ public:
 	/// creates new tracks for non-matching blobs
 	std::list<Track>* assignBlobs(std::list<cv::Rect>& blobs);
 
+	/// assign blobs in occlusion area
+	std::list<Track>* assignBlobsInOcclusion(Occlusion& occlusion, std::list<cv::Rect>& blobs);
+
 	// TODO reserved for later implementation of data base 
 	void attachCountRecorder(CountRecorder* pRecorder);
 
 	// TODO make private in final version
 	/// set isOccluded flag for each occluded track, calculates occlusion rectangle
-	std::list<Occlusion>* checkOcclusion();
+	std::list<Occlusion>* setOcclusion();
 
 	/// simple classifcation of vehicles based on length and size
 	CountResults countVehicles(int frameCnt = 0);
@@ -226,6 +243,7 @@ private:
 	std::list<int>			m_trackIDs;
 
 };
+
 
 /// combine tracks that have
 ///	same direction and area intersection

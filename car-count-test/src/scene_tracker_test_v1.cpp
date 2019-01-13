@@ -403,11 +403,74 @@ TEST_CASE("#occ003 remainingOccludedUpdateSteps", "[SCENE]") {
 	SECTION("distance after next update step smaller than half velocity -> is occluded") {
 		// steps in occlusion: (2 * size) / (2 * velocity)
 		int steps = (2 * size.width) / (2 * velocity.x);
-
 		//cout << right.getActualEntry().rect() << endl;
 		//cout << left.getActualEntry().rect() << endl;
 
 		REQUIRE( steps == remainingOccludedUpdateSteps(left, right) );
 	}
+}
 
+
+TEST_CASE("#occ004 setOcclusion", "[SCENE]") {
+	// empty config, two tracks (#1 moving to right, #2 moving to left)
+	// will be assigned in SceneTracker::updateIntersect() steps
+	using namespace std;
+	Config config;	
+	Config* pConfig = &config;
+	config.setParam("roi_width", "200");
+	config.setParam("roi_height", "200");
+	SceneTracker scene(pConfig);
+
+	// two blobs with velocityX distance to next update
+	cv::Size size(30,20);
+	cv::Point origin(0,0);
+	cv::Point velocity(10,0);
+	int distNextUpd = velocity.x;
+	int nUpdates = 3;
+	int roiWidth = stoi(config.getParam("roi_width"));
+	
+	// final origin of blobs after nUpdates
+	cv::Point finLeft(roiWidth/2,0);
+	int finRightX = finLeft.x - distNextUpd - size.width;
+	cv::Point finRight(finRightX,0);
+
+	// origin before nUpdates
+	cv::Point orgLeft = finLeft + nUpdates * velocity;
+	cv::Point orgRight= finRight - nUpdates * velocity;
+
+	// nUpdates of SceneTracker::updateIntersect()
+	cv::Rect rcRight(orgRight, size);
+	cv::Rect rcLeft(orgLeft, size);
+	list<cv::Rect> blobs;
+	list<Track>* pTracks;
+	for (int i=1; i<=nUpdates; ++i) {
+		rcRight += velocity;
+		blobs.push_back(rcRight);
+		rcLeft -= velocity;
+		blobs.push_back(rcLeft);
+		pTracks = scene.assignBlobs(blobs);
+	}
+	//cout << "moving right: " << pTracks->front().getActualEntry().rect() << "  velocity: " << pTracks->front().getVelocity() << endl;
+	//cout << "moving left:  " << pTracks->back().getActualEntry().rect()	<< " velocity: " << pTracks->back().getVelocity() << endl;
+
+	SECTION("next step will be occluded -> set occlusion structure and isOccluded bit for both tracks") {
+		list<Occlusion>* pOcclusion = scene.setOcclusion();
+		REQUIRE( 1 == pOcclusion->size() );
+		REQUIRE( true == pTracks->front().isOccluded() );
+		REQUIRE( true == pTracks->back().isOccluded() );
+
+			SECTION("setOcclusion only once (reset in updateTracksIntersect)") {
+				// occlusion list contains still one element
+				// and it will be deleted after nRemainingUpdateSteps (decremented in updateTracksIntersect)
+				list<Occlusion>* pOcclusion = scene.setOcclusion();
+				REQUIRE( 1 == pOcclusion->size() );
+
+				// find track #1 and #2 by ID
+				list<Track>::iterator it;
+				it = find_if(pTracks->begin(), pTracks->end(), TrackID_eq(1));
+				REQUIRE( true == it->isOccluded() );
+				it = find_if(pTracks->begin(), pTracks->end(), TrackID_eq(2));
+				REQUIRE( true == it->isOccluded() );
+		}
+	}
 }
