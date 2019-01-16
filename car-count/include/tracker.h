@@ -244,6 +244,11 @@ private:
 
 };
 
+/// adjust position of substitute track entry based on blob edges (occluded tracks)
+void adjustSubstPos(const cv::Rect& blob, cv::Rect& rcRight, cv::Rect& rcLeft);
+
+/// create substitute track entry by using track velocity
+cv::Rect calcSubstitute(const Track& track);
 
 /// combine tracks that have
 ///	same direction and area intersection

@@ -474,3 +474,92 @@ TEST_CASE("#occ004 setOcclusion", "[SCENE]") {
 		}
 	}
 }
+
+
+TEST_CASE("#occ005 calcSubstitute", "[SCENE]") {
+	// two tracks moving into opposite direction
+	using namespace std;
+	Track right(1);
+	Track left(2);		
+	cv::Size roi(100,100);
+
+	cv::Size size(20,10);
+	cv::Point orgRight(0,0);
+	cv::Point orgLeft(80,0);
+	cv::Point velocity(5,0);
+	int nUpdates = 3;
+	
+	cv::Rect rcRight(orgRight, size);
+	cv::Rect rcLeft(orgLeft, size);
+	for (int i=1; i<=nUpdates; ++i) {
+		rcRight += velocity;
+		rcLeft -= velocity;
+		right.addTrackEntry(rcRight, roi);
+		left.addTrackEntry(rcLeft, roi);
+	}
+	//cout << "velocity right: " << right.getVelocity() << " velocity left: " << left.getVelocity() << endl;
+
+	SECTION("substitute = track entry + velocity") {
+		cv::Rect rightSubstitute = right.getActualEntry().rect() + velocity;
+		REQUIRE( rightSubstitute == calcSubstitute(right) );
+		cv::Rect leftSubstitute = left.getActualEntry().rect() - velocity;
+		REQUIRE( leftSubstitute == calcSubstitute(left) );
+	}
+}
+
+
+TEST_CASE("#occ006 adjustSubstPos", "[SCENE]") {
+	// two track entries moving into opposite direction
+	using namespace std;
+	cv::Size rightSize(30,20);
+	cv::Size leftSize(40,25);
+	cv::Point velocity(5,0);
+
+	SECTION("moving right >>> <<< moving left") {
+		cv::Point rightOrg(10,0); // br=(40,20)
+		cv::Point leftOrg(50,0);  // br=(90,25)
+		cv::Rect movesRight(rightOrg,rightSize);
+		cv::Rect movesLeft(leftOrg,leftSize);
+		cv::Rect blob = movesRight | movesLeft;
+		// blob: wh=[80,25] tl=(10,0)
+		//cout << "blob: " << blob << endl;
+		SECTION("shift rects to left (-velocity)") {
+			cv::Rect shiftRight = movesRight - velocity;
+			cv::Rect shiftLeft = movesLeft - velocity;
+			adjustSubstPos(blob, shiftRight, shiftLeft);
+		}
+		SECTION("shift rects to right (+velocity)") {
+			cv::Rect shiftRight = movesRight + velocity;
+			cv::Rect shiftLeft = movesLeft + velocity;
+			adjustSubstPos(blob, shiftRight, shiftLeft);
+			REQUIRE( movesRight == shiftRight);
+			REQUIRE( movesLeft == shiftLeft);
+		}
+	}
+
+	SECTION("<<< moving left  moving right >>>") {
+		cv::Point rightOrg(60,0); // br=(90,20)
+		cv::Point leftOrg(10,0);  // br=(50,25)
+		cv::Rect movesRight(rightOrg,rightSize);
+		cv::Rect movesLeft(leftOrg,leftSize);
+		cv::Rect blob = movesRight | movesLeft;
+		// blob: wh=[80,25] tl=(10,0)
+		//cout << "blob: " << blob << endl;	
+		SECTION("shift rects to left (-velocity)") {
+			cv::Rect shiftRight = movesRight - velocity;
+			cv::Rect shiftLeft = movesLeft - velocity;
+			adjustSubstPos(blob, shiftRight, shiftLeft);
+			REQUIRE( movesRight == shiftRight);
+			REQUIRE( movesLeft == shiftLeft);
+		}
+		SECTION("shift rects to right (+velocity)") {
+			cv::Rect shiftRight = movesRight + velocity;
+			cv::Rect shiftLeft = movesLeft + velocity;
+			adjustSubstPos(blob, shiftRight, shiftLeft);
+			REQUIRE( movesRight == shiftRight);
+			REQUIRE( movesLeft == shiftLeft);
+			//cout << shiftRight << endl;
+			//cout << movesRight << endl;
+		}
+	}
+}

@@ -503,38 +503,6 @@ std::list<Track>* SceneTracker::assignBlobs(std::list<cv::Rect>& blobs) {
 	return &m_tracks;
 }
 
-cv::Rect calcSubstitute(const Track& track) {
-	cv::Point velocity((int)round(track.getVelocity().x), (int)round(track.getVelocity().y));
-	cv::Rect substitute = track.getActualEntry().rect() + velocity;
-	return substitute;
-}
-
-
-void adjustSubstPos(const cv::Rect& blob, cv::Rect& rcRight, cv::Rect& rcLeft) {
-	int mvRight_edgeLeft = rcRight.x;
-	int mvRight_edgeRight = rcRight.x + rcRight.width;
-	int mvLeft_edgeLeft = rcLeft.x;
-	int mvLeft_edgeRight = rcLeft.x + rcLeft.width;
-
-	// assign blob's right edge
-	// to left moving track
-	if (mvLeft_edgeRight > mvRight_edgeRight) {
-		rcLeft.x = (blob.x + blob.width) - rcLeft.width;
-	// to right moving track
-	} else {
-		rcRight.x = (blob.x + blob.width) - rcRight.width;
-	}
-
-	// assign blob's left edge
-	// to left moving track
-	if (mvLeft_edgeLeft < mvRight_edgeLeft) {
-		rcLeft.x = blob.x;
-	// to right moving track
-	} else {
-		rcRight.x = blob.x;
-	}
-	return;
-}
 
 std::list<Track>* SceneTracker::assignBlobsInOcclusion(Occlusion& occlusion, std::list<cv::Rect>& blobs) {
 	
@@ -948,6 +916,40 @@ std::list<Track>* SceneTracker::updateTracksIntersect(std::list<cv::Rect>& blobs
 //////////////////////////////////////////////////////////////////////////////
 // Functions /////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
+
+void adjustSubstPos(const cv::Rect& blob, cv::Rect& rcRight, cv::Rect& rcLeft) {
+	int mvRight_edgeLeft = rcRight.x;
+	int mvRight_edgeRight = rcRight.x + rcRight.width;
+	int mvLeft_edgeLeft = rcLeft.x;
+	int mvLeft_edgeRight = rcLeft.x + rcLeft.width;
+
+	// assign blob's right edge
+	// to left moving track
+	if (mvLeft_edgeRight > mvRight_edgeRight) {
+		rcLeft.x = (blob.x + blob.width) - rcLeft.width;
+	// to right moving track
+	} else {
+		rcRight.x = (blob.x + blob.width) - rcRight.width;
+	}
+
+	// assign blob's left edge
+	// to left moving track
+	if (mvLeft_edgeLeft < mvRight_edgeLeft) {
+		rcLeft.x = blob.x;
+	// to right moving track
+	} else {
+		rcRight.x = blob.x;
+	}
+	return;
+}
+
+
+cv::Rect calcSubstitute(const Track& track) {
+	cv::Point velocity((int)round(track.getVelocity().x), (int)round(track.getVelocity().y));
+	cv::Rect substitute = track.getActualEntry().rect() + velocity;
+	return substitute;
+}
+
 
 std::list<Track>* combineTracks(std::list<Track>& tracks, cv::Size roi) {
 	// combine tracks, if they have
