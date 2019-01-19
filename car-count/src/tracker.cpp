@@ -563,62 +563,6 @@ void SceneTracker::attachCountRecorder(CountRecorder* pRecorder) {
 }
 
 
-std::list<Occlusion>*  SceneTracker::setOcclusion() {
-	typedef std::list<Track>::iterator TiterTracks;
-	TiterTracks iTrack = m_tracks.begin();
-
-	// for_each track
-	while (iTrack != m_tracks.end()) {
-		// check only for tracks, that are not occluded
-		if (!iTrack->isOccluded()) {
-			// assing compare track to next list element
-			TiterTracks iTrackComp = iTrack;
-			++iTrackComp;
-
-			// for_each remaining tracks in list
-			while (iTrackComp != m_tracks.end()) {
-				if (!iTrackComp->isOccluded()) {
-					if (isDirectionOpposite(*iTrack, *iTrackComp, 0.5)) {
-				
-						// determine left and right moving track
-						Track& movesRight = *iTrack;
-						Track& movesLeft = *iTrackComp;
-						if (signBit(iTrack->getVelocity().x)) {
-							movesLeft = *iTrack;
-							movesRight = *iTrackComp;
-						} else {
-							movesLeft = *iTrackComp;
-							movesRight = *iTrack;
-						}
-
-						if (isNextUpdateOccluded(movesLeft, movesRight)) {
-							Occlusion occ;
-							occ.hasPassed = false;
-							occ.remainingUpdateSteps = remainingOccludedUpdateSteps(movesLeft, movesRight);
-							occ.rect = occludedArea(movesLeft, movesRight, occ.remainingUpdateSteps); 
-							occ.movingLeft = &movesLeft;
-							occ.movingRight = &movesRight;
-					
-							// create occlusion list entry
-							m_overlaps.push_back(occ);
-
-							// mark tracks as occluded
-							movesLeft.setOccluded(true);
-							movesRight.setOccluded(true);
-						}
-					} // end_if isDirectionOpposite
-				} // end_if track opposite is not occluded
-				++iTrackComp;
-			} // end_for_each remaining tracks in list
-		} // end_if track is not occluded
-
-		++iTrack;
-	} // end_for_each track
-
-	return &m_overlaps;
-}
-
-
 /// helper functor for SceneTracker::countVehicles
 ///  counting conditions for vehicle track:
 ///  - above confidence level
@@ -736,6 +680,11 @@ std::list<Track>* SceneTracker::deleteReversingTracks() {
 }
 
 
+std::list<Occlusion>* SceneTracker::getOcclusions() {
+	return &m_overlaps;
+}
+
+
 // DEBUG
 struct Trk {
 	int id;
@@ -777,11 +726,6 @@ int SceneTracker::nextTrackID()
 }
 
 
-std::list<Occlusion>* SceneTracker::overlaps() {
-	return &m_overlaps;
-}
-
-
 bool SceneTracker::returnTrackID(int id)
 {
 	if (id > 0 ) {
@@ -794,6 +738,62 @@ bool SceneTracker::returnTrackID(int id)
 	}
 	else
 		return false;
+}
+
+
+std::list<Occlusion>*  SceneTracker::setOcclusion() {
+	typedef std::list<Track>::iterator TiterTracks;
+	TiterTracks iTrack = m_tracks.begin();
+
+	// for_each track
+	while (iTrack != m_tracks.end()) {
+		// check only for tracks, that are not occluded
+		if (!iTrack->isOccluded()) {
+			// assing compare track to next list element
+			TiterTracks iTrackComp = iTrack;
+			++iTrackComp;
+
+			// for_each remaining tracks in list
+			while (iTrackComp != m_tracks.end()) {
+				if (!iTrackComp->isOccluded()) {
+					if (isDirectionOpposite(*iTrack, *iTrackComp, 0.5)) {
+				
+						// determine left and right moving track
+						Track& movesRight = *iTrack;
+						Track& movesLeft = *iTrackComp;
+						if (signBit(iTrack->getVelocity().x)) {
+							movesLeft = *iTrack;
+							movesRight = *iTrackComp;
+						} else {
+							movesLeft = *iTrackComp;
+							movesRight = *iTrack;
+						}
+
+						if (isNextUpdateOccluded(movesLeft, movesRight)) {
+							Occlusion occ;
+							occ.hasPassed = false;
+							occ.remainingUpdateSteps = remainingOccludedUpdateSteps(movesLeft, movesRight);
+							occ.rect = occludedArea(movesLeft, movesRight, occ.remainingUpdateSteps); 
+							occ.movingLeft = &movesLeft;
+							occ.movingRight = &movesRight;
+					
+							// create occlusion list entry
+							m_overlaps.push_back(occ);
+
+							// mark tracks as occluded
+							movesLeft.setOccluded(true);
+							movesRight.setOccluded(true);
+						}
+					} // end_if isDirectionOpposite
+				} // end_if track opposite is not occluded
+				++iTrackComp;
+			} // end_for_each remaining tracks in list
+		} // end_if track is not occluded
+
+		++iTrack;
+	} // end_for_each track
+
+	return &m_overlaps;
 }
 
 
@@ -913,14 +913,13 @@ std::list<Track>* SceneTracker::updateTracksIntersect(std::list<cv::Rect>& blobs
 	std::list<Occlusion>* pOcclusions;
 	pOcclusions = setOcclusion();
 
-	// DEBUG
-	if (pOcclusions->size() > 0) {
+	// DEBUG -> delete after testing
+	/*if (pOcclusions->size() > 0) {
 		for_each(pOcclusions->begin(), pOcclusions->end(), printRect);
 	}
 
-	// TODO Debug -> delete
 	for_each(m_tracks.begin(), m_tracks.end(), printVelocity);
-
+	*/
 	
     return &m_tracks;
 }

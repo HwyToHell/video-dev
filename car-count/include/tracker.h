@@ -183,10 +183,6 @@ public:
 	// TODO reserved for later implementation of data base 
 	void attachCountRecorder(CountRecorder* pRecorder);
 
-	// TODO make private in final version
-	/// set isOccluded flag for each occluded track, calculates occlusion rectangle
-	std::list<Occlusion>* setOcclusion();
-
 	/// simple classifcation of vehicles based on length and size
 	CountResults countVehicles(int frameCnt = 0);
 
@@ -197,6 +193,9 @@ public:
 	/// a new track is created from last track entry
 	std::list<Track>* deleteReversingTracks();
 
+	/// return pointer to list of overlapping tracks
+	std::list<Occlusion>* getOcclusions();
+
 	/// at least two tracks overlap, based on overlap regions
 	bool isOverlappingTracks();
 
@@ -204,13 +203,14 @@ public:
 	int nextTrackID();
 
 	// TODO delete
-	std::list<Occlusion>* overlaps();
-
-	// TODO delete
 	void printVehicles();
 
 	/// releases ID for deleted track
 	bool returnTrackID(int id);
+
+	// TODO make private in final version
+	/// set isOccluded flag for each occluded track, calculates occlusion rectangle
+	std::list<Occlusion>* setOcclusion();
 
 	/// returns motion objects that need to be classified by DNN
 	std::vector<TrackEntry>triggerDNNClassif();

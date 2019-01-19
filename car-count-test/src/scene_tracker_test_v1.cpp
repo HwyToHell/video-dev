@@ -4,6 +4,13 @@
 using namespace std;
 using namespace cv;
 
+
+/// move rcRight and rcLeft with velocity, push them to blob list
+void moveDetachedBlobs(const cv::Point velocity, cv::Rect& rcRight, cv::Rect& rcLeft, list<cv::Rect>& blobs);
+
+/// move rcRight and rcLeft with velocity, combine them to merged blob, push it to blob list
+void moveOccludedBlobs(const cv::Point velocity, cv::Rect& rcRight, cv::Rect& rcLeft, list<cv::Rect>& blobs);
+
 //////////////////////////////////////////////////////////////////////////////
 // ID handling
 //////////////////////////////////////////////////////////////////////////////
@@ -600,10 +607,7 @@ TEST_CASE("#occ007 assignBlobsInOcclusion", "[SCENE]") {
 	list<cv::Rect> blobs;
 	list<Track>* pTracks;
 	for (int i=1; i<=nUpdates; ++i) {
-		rcRight += velocity;
-		blobs.push_back(rcRight);
-		rcLeft -= velocity;
-		blobs.push_back(rcLeft);
+		moveDetachedBlobs(velocity, rcRight, rcLeft, blobs);
 		pTracks = scene.assignBlobs(blobs);
 	}
 	//cout << "moving right: " << pTracks->front().getActualEntry().rect() << "  velocity: " << pTracks->front().getVelocity() << endl;
@@ -614,10 +618,7 @@ TEST_CASE("#occ007 assignBlobsInOcclusion", "[SCENE]") {
 	//cout << "occlusion area: " << pOcclusion->front().rect << " remaining steps: " << pOcclusion->front().remainingUpdateSteps << endl;
 
 	SECTION("1st update -> still two blobs in occlusion area") {
-		rcRight += velocity;
-		blobs.push_back(rcRight);
-		rcLeft -= velocity;
-		blobs.push_back(rcLeft);
+		moveDetachedBlobs(velocity, rcRight, rcLeft, blobs);
 		//cout << "moving right:        " << pTracks->front().getActualEntry().rect() << "  velocity: " << pTracks->front().getVelocity() << endl;
 		//cout << "moving left:         " << pTracks->back().getActualEntry().rect()	<< " velocity: " << pTracks->back().getVelocity() << endl;
 		//cout << "new 1st blob right: " << blobs.front() << endl;
@@ -634,10 +635,7 @@ TEST_CASE("#occ007 assignBlobsInOcclusion", "[SCENE]") {
 		SECTION("subsequent updates with full velocity") {
 
 			SECTION("2nd update -> one merged blob") {
-				rcRight += velocity;
-				rcLeft -= velocity;
-				cv::Rect rcMerged = rcRight | rcLeft;
-				blobs.push_back(rcMerged);
+				moveOccludedBlobs(velocity, rcRight, rcLeft, blobs);
 				//cout << "1st moving right:     " << pTracks->front().getActualEntry().rect() << " velocity: " << pTracks->front().getVelocity() << endl;
 				//cout << "1st moving left:      " << pTracks->back().getActualEntry().rect()	<< " velocity: " << pTracks->back().getVelocity() << endl;
 				//cout << "new 2nd merged blob: " << blobs.front() << endl;
@@ -649,6 +647,7 @@ TEST_CASE("#occ007 assignBlobsInOcclusion", "[SCENE]") {
 				// track positions are adjusted according to blob edges
 				// track moving right, left edge -> left blob edge
 				// track moving left, right edge -> right blob edge 
+				cv::Rect rcMerged = rcRight | rcLeft;
 				int trackMovingRight_leftEdge = pTracks->front().getActualEntry().rect().x;
 				int trackMovingLeft_rightEdge = pTracks->back().getActualEntry().rect().x
 					+ pTracks->back().getActualEntry().rect().width;
@@ -658,17 +657,11 @@ TEST_CASE("#occ007 assignBlobsInOcclusion", "[SCENE]") {
 				SECTION("5th update -> two blobs again, occlusion has been passed") {
 					// 3rd and 4th -> one merged blob
 					for (int i=3; i<=4; ++i) {
-						rcRight += velocity;
-						rcLeft -= velocity;
-						cv::Rect rcMerged = rcRight | rcLeft;
-						blobs.push_back(rcMerged);
+						moveOccludedBlobs(velocity, rcRight, rcLeft, blobs);
 						pTracks = scene.assignBlobsInOcclusion(pOcclusion->front(), blobs);
 					}
 					// 5th -> two blobs again
-					rcRight += velocity;
-					blobs.push_back(rcRight);
-					rcLeft -= velocity;
-					blobs.push_back(rcLeft);
+					moveDetachedBlobs(velocity, rcRight, rcLeft, blobs);
 					//cout << "4th moving right:    " << pTracks->front().getActualEntry().rect() << " velocity: " << pTracks->front().getVelocity() << endl;
 					//cout << "4th moving left:     " << pTracks->back().getActualEntry().rect()	<< " velocity: " << pTracks->back().getVelocity() << endl;
 					//cout << "new 5th blob right: " << blobs.front() << endl;
@@ -760,18 +753,116 @@ TEST_CASE("#upd001 updateTracksIntersect", "[SCENE]") {
 	// blob size and velocity
 	cv::Size size(30,20);
 	cv::Point origin(0,0);
-	cv::Point velocity(10,0);
+	int velocityX = 10;
+	cv::Point velocity(velocityX,0);
+	int roiWidth = stoi(config.getParam("roi_width"));
+	int nUpdates = 3;
 
-	SECTION("assign blobs") {
+	// origin of blobs after nUpdates -> distance = 4 * velocityX
+	int occlusionX = roiWidth / 2;
+	int distance = 4 * velocityX;
+	cv::Point finMoveRight(occlusionX - distance / 2 - size.width, 0);
+	cv::Point finMoveLeft(occlusionX + distance / 2, 0);
+	
+	// origin before nUpdates
+	cv::Point orgMoveLeft = finMoveLeft + nUpdates * velocity;
+	cv::Point orgMoveRight= finMoveRight - nUpdates * velocity;
 
+	SECTION("assign blobs before occlusion") {
+		// next updates -> two detached blobs
+		cv::Rect rcRight(orgMoveRight, size);
+		cv::Rect rcLeft(orgMoveLeft, size);
+		list<cv::Rect> blobs;
+		list<Track>* pTracks;
+		for (int i=1; i<=nUpdates; ++i) {
+			moveDetachedBlobs(velocity, rcRight, rcLeft, blobs);
+			pTracks = scene.updateTracksIntersect(blobs, i);
+
+			// all blobs have been assigned
+			REQUIRE( 0 == blobs.size() );
+			REQUIRE( rcRight == pTracks->front().getActualEntry().rect() );
+			REQUIRE( rcLeft == pTracks->back().getActualEntry().rect() );
+		}
+		//cout << "moving right before occlusion:    " << pTracks->front().getActualEntry().rect() << " velocity: " << pTracks->front().getVelocity() << endl;
+		//cout << "moving left before occlusion:     " << pTracks->back().getActualEntry().rect()	<< " velocity: " << pTracks->back().getVelocity() << endl;
+
+	
 		SECTION("create occlusion") {
+			// next update -> create occlusion (blobs still detached)
+			// no occlusion before update
+			list<Occlusion>* pOcclusions = scene.setOcclusion();
+			REQUIRE( 0 == pOcclusions->size() );
+
+			moveDetachedBlobs(velocity, rcRight, rcLeft, blobs);
+			pTracks = scene.updateTracksIntersect(blobs, 0);
+			pOcclusions = scene.getOcclusions();
+			REQUIRE( 1 == pOcclusions->size() );
+			//cout << "occlusion after next update:    " << pTracks->front().getActualEntry().rect() << endl;
+			//cout << "occlusion after next update:     " << pTracks->back().getActualEntry().rect() << endl;
 
 			SECTION("assign blobs in occlusion") {
+				// steps in occlusion: (2 * size + distCurr) / (2 * velocity)
+				int distCurr = rcLeft.x - rcRight.x - rcRight.width;
+				int steps = static_cast<int>( ceil((2 * size.width + distCurr) / static_cast<double>( (2 * velocity.x) )) );
+				REQUIRE( steps == pOcclusions->front().remainingUpdateSteps );
+
+				// next update steps in occlusion (one occluded blob)
+				for (int i=1; i<=steps; ++i) {
+					moveOccludedBlobs(velocity, rcRight, rcLeft, blobs);
+					pTracks = scene.updateTracksIntersect(blobs, i);
+
+					// all blobs have been assigned
+					REQUIRE( 0 == blobs.size() );
+					REQUIRE( rcRight == pTracks->front().getActualEntry().rect() );
+					REQUIRE( rcLeft == pTracks->back().getActualEntry().rect() );
+				}
+				//cout << "moving right after occlusion:    " << pTracks->front().getActualEntry().rect() << " velocity: " << pTracks->front().getVelocity() << endl;
+				//cout << "moving left after occlusion:     " << pTracks->back().getActualEntry().rect()	<< " velocity: " << pTracks->back().getVelocity() << endl;
 
 				SECTION("delete occlusion") {
+					// next update -> blobs detache
+					moveDetachedBlobs(velocity, rcRight, rcLeft, blobs);
+					pTracks = scene.updateTracksIntersect(blobs, 10);
+
+					// all blobs have been assigned
+					REQUIRE( 0 == blobs.size() );
+					REQUIRE( rcRight == pTracks->front().getActualEntry().rect() );
+					REQUIRE( rcLeft == pTracks->back().getActualEntry().rect() );
+
+					// occlusion has been deleted
+					pOcclusions = scene.getOcclusions();
+					REQUIRE( 0 == pOcclusions->size() );
 
 				}
 			}
 		}
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+// Functions /////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+// move rcRight and rcLeft with velocity, push them to blob list
+void moveDetachedBlobs(const cv::Point velocity, cv::Rect& rcRight, cv::Rect& rcLeft, list<cv::Rect>& blobs) {
+	rcRight += velocity;
+	rcLeft -= velocity;
+	blobs.push_back(rcRight);
+	blobs.push_back(rcLeft);
+	return;
+}
+
+
+// move rcRight and rcLeft with velocity, combine them to merged blob, push it to blob list
+void moveOccludedBlobs(const cv::Point velocity, cv::Rect& rcRight, cv::Rect& rcLeft, list<cv::Rect>& blobs) {
+	rcRight += velocity;
+	rcLeft -= velocity;
+	
+	// function only valid for intersecting blobs
+	assert( rcRight.x + rcRight.width >= rcLeft.x ) ;
+
+	cv::Rect rcMerge = rcRight | rcLeft;
+	blobs.push_back(rcMerge);
+	return;
 }
