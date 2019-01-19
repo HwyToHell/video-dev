@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include <cassert>
+
 #include "../include/config.h"
 #include "../include/recorder.h"
 
@@ -505,6 +507,8 @@ std::list<Track>* SceneTracker::assignBlobs(std::list<cv::Rect>& blobs) {
 
 
 std::list<Track>* SceneTracker::assignBlobsInOcclusion(Occlusion& occlusion, std::list<cv::Rect>& blobs) {
+
+	assert(occlusion.hasPassed == false);
 	
 	// find all blobs in occlusion area and remove from blobs list
 	std::list<cv::Rect> blobsInOcclusion;
@@ -515,8 +519,9 @@ std::list<Track>* SceneTracker::assignBlobsInOcclusion(Occlusion& occlusion, std
 		if (intersect.area() > static_cast<int>(0.8 * iBlob->area()) ) {
 			blobsInOcclusion.push_back(*iBlob);
 			iBlob = blobs.erase(iBlob);
+		} else {
+			++iBlob;
 		}
-		++iBlob;
 	}
 
 	// one or zero blobs -> use substitute blobs for track update
@@ -539,8 +544,16 @@ std::list<Track>* SceneTracker::assignBlobsInOcclusion(Occlusion& occlusion, std
 	
 	// two or more blobs -> regular track update
 	} else {
-		assignBlobs(blobs);
+		occlusion.movingRight->updateTrackIntersect(blobsInOcclusion, m_roiSize, 0.4, 4); 
+		occlusion.movingLeft->updateTrackIntersect(blobsInOcclusion, m_roiSize, 0.4, 4); 
 	}
+
+	// occlusion has been passed -> mark occlution for deletion in updateTracksIntersect
+	int mvRight_edgeLeft = occlusion.movingRight->getActualEntry().rect().x;
+	int mvLeft_edgeRight = occlusion.movingLeft->getActualEntry().rect().x
+		+ occlusion.movingLeft->getActualEntry().rect().width;
+	if (mvRight_edgeLeft > mvLeft_edgeRight)
+		occlusion.hasPassed = true;
 
 	return &m_tracks;
 }
@@ -580,6 +593,7 @@ std::list<Occlusion>*  SceneTracker::setOcclusion() {
 
 						if (isNextUpdateOccluded(movesLeft, movesRight)) {
 							Occlusion occ;
+							occ.hasPassed = false;
 							occ.remainingUpdateSteps = remainingOccludedUpdateSteps(movesLeft, movesRight);
 							occ.rect = occludedArea(movesLeft, movesRight, occ.remainingUpdateSteps); 
 							occ.movingLeft = &movesLeft;
@@ -868,9 +882,8 @@ std::list<Track>* SceneTracker::updateTracksIntersect(std::list<cv::Rect>& blobs
 			assignBlobs(blobs);
 
 			// delete occlusion and unset track occlusion status
-			// after last update has been executed
-			--iOcc->remainingUpdateSteps;
-			if (iOcc->remainingUpdateSteps <= 0) {
+			// after occlusion has been passed
+			if (iOcc->hasPassed) {
 				iOcc->movingLeft->setOccluded(false);
 				iOcc->movingRight->setOccluded(false);
 				iOcc = m_overlaps.erase(iOcc);
@@ -1001,22 +1014,6 @@ std::list<Track>* combineTracks(std::list<Track>& tracks, cv::Size roi) {
 }
 
 
-void discardMatchingBlobs(Occlusion& occ, std::list<cv::Rect>& blobs) {
-	// for_each blob
-	std::list<cv::Rect>::iterator iBlob = blobs.begin();
-	while (iBlob != blobs.end()) {
-		// blob predominantly within occlusion area -> erase
-		cv::Rect intersect = occ.rect & *iBlob;
-		if (intersect.area() > static_cast<int>(0.8 * iBlob->area()) ) {
-				iBlob = blobs.erase(iBlob);
-		} else {
-			++iBlob;
-		}
-	} // end_while
-	return;
-}
-
-
 // current x distance between tracked objects
 int distanceCurrent(Track& mvLeft, Track& mvRight) {
 	int mvLeft_leftEdge = mvLeft.getActualEntry().rect().x;
@@ -1106,6 +1103,6 @@ int remainingOccludedUpdateSteps(Track& mvLeft, Track& mvRight) {
 
 	double velocitySum = mvRight.getVelocity().x + abs(mvLeft.getVelocity().x);
 
-	int nSteps = static_cast<int>( (dist + widthRight + widthLeft) / velocitySum );
+	int nSteps = static_cast<int>( ceil((dist + widthRight + widthLeft) / velocitySum) );
 	return nSteps;
 }

@@ -156,6 +156,7 @@ private:
 
 /// overlapping tracks
 struct Occlusion {
+	bool		hasPassed;
 	Track*		movingLeft;
 	Track*		movingRight;
 	cv::Rect	rect;
@@ -254,9 +255,6 @@ cv::Rect calcSubstitute(const Track& track);
 ///	same direction and area intersection
 /// assign smaller tracks to longer ones
 std::list<Track>* combineTracks(std::list<Track>& tracks, cv::Size roi);
-
-/// blobs inside occlusion rectangle are removed from list
-void discardMatchingBlobs(Occlusion& occ, std::list<cv::Rect>& blobs);
 
 /// velocityX of two tracks has different sign
 bool isDirectionOpposite(Track& track, Track& trackCompare, const double backlash);
