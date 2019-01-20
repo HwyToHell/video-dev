@@ -571,7 +571,7 @@ TEST_CASE("#occ006 adjustSubstPos", "[SCENE]") {
 	}
 }
 
-
+/*
 TEST_CASE("#occ007 assignBlobsInOcclusion", "[SCENE]") {
 	// empty config, create two tracks (#1 moving to right, #2 moving to left)
 	// set occlusion, as next update step will be occluded
@@ -738,7 +738,7 @@ TEST_CASE("#occ007 assignBlobsInOcclusion", "[SCENE]") {
 		} // "subsequent updates with half velocity"
 	} // "1st update -> still two blobs in occlusion area"
 }
-
+*/
 
 TEST_CASE("#upd001 updateTracksIntersect", "[SCENE]") {
 	// set up config, velocity, scene with 2 tracks

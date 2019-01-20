@@ -33,14 +33,14 @@ bool waitForEnter();
 
 
 
-int main_png(int argc, char* argv[]) {
+int main(int argc, char* argv[]) {
 	using namespace std;
 	//string path320("D:/Users/Holger/counter/traffic320x240/");
 	//string path640("D:/Users/Holger/counter/traffic640x480_low_pass/");
 	//string busStop("D:/Users/Holger/counter/2017-09-18/bus_stop/");
 	string opposite("D:/Users/Holger/counter/2017-09-18/opposite/"); 
-	int start = 845;
-	int stop = 890;
+	int start = 2;
+	int stop = 40;
 
 	string workPath = findWorkPath(start, stop, opposite);
 	if (workPath == "") {
@@ -318,7 +318,7 @@ bool trackImageSequence(SceneTracker* pScene, std::string directory, std::string
 
 		// show occlusion
 		if (pScene->isOverlappingTracks()) {
-			std::list<Occlusion>* pOcc = pScene->overlaps();
+			std::list<Occlusion>* pOcc = pScene->getOcclusions();
 			std::list<Occlusion>::iterator iOcc = pOcc->begin();
 			while (iOcc != pOcc->end()) {
 				cv::rectangle(tracks, iOcc->rect, white);

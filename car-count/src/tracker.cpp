@@ -137,6 +137,7 @@ bool Track::addTrackEntry(cv::Rect& blob, const cv::Size roi) {
 
 /// create substitute TrackEntry, if no close blob available
 bool Track::addSubstitute(cv::Size roi) {
+	// TODO adjust for leaving and entering roi
 	// take average velocity and compose bbox from previous element
 	cv::Point2i velocity((int)round(m_avgVelocity.x), (int)round(m_avgVelocity.y));
 	cv::Rect substitute = getActualEntry().rect() + velocity;
@@ -376,7 +377,9 @@ void Track::updateTrack(std::list<cv::Rect>& blobs, cv::Size roi, int maxConf,
 			m_isMarkedForDelete = true;
 		}
 		else
-			addSubstitute(roi);
+			// if blob outside roi -> mark track for deletion
+			if (!addSubstitute(roi))
+				m_isMarkedForDelete = true;
 	}
 
 	return;
@@ -456,7 +459,10 @@ void Track::updateTrackIntersect(std::list<cv::Rect>& blobs, cv::Size roi, doubl
 		else
 		// TODO move assignment of substitute after assignment of other tracks (SceneTracker::updateTracksInterSect)
 		// reason: if other tracks are assigned, no substitute value needs to be added
-			addSubstitute(roi);
+		
+			// if blob outside roi -> mark track for deletion
+			if (!addSubstitute(roi))
+				m_isMarkedForDelete = true;
 	}
 }
 
@@ -531,12 +537,13 @@ std::list<Track>* SceneTracker::assignBlobsInOcclusion(Occlusion& occlusion, std
 		cv::Rect rcRight = calcSubstitute(*occlusion.movingRight);
 		cv::Rect rcLeft = calcSubstitute(*occlusion.movingLeft);
 
+		/* TODO results not reliable -> further tests needed
 		// one blob -> adjust substitute position based on blob's edges
 		// by keeping the same substitute size (see occlusion.pptx, page 2)
 		if (blobsInOcclusion.size() == 1) { 
 			list<cv::Rect>::iterator iBlobs = blobsInOcclusion.begin();
 			adjustSubstPos(*iBlobs, rcRight, rcLeft);
-		}
+		} */
 
 		// add rcRight / Left (original or adjusted)
 		occlusion.movingRight->addTrackEntry(rcRight, m_roiSize);
@@ -635,6 +642,10 @@ std::list<Track>* SceneTracker::deleteMarkedTracks() {
 
 	while (iTrack != m_tracks.end()) {
 		if (iTrack->isMarkedForDelete()) {
+			// TODO if occluded -> delete occlusion
+			if (iTrack->isOccluded() {
+				// delete occlusion
+			}
 			returnTrackID(iTrack->getId());
 			iTrack = m_tracks.erase(iTrack);
 		} else {
@@ -655,8 +666,8 @@ std::list<Track>* SceneTracker::deleteReversingTracks() {
 
 	// for_each track
 	while (iTrack != m_tracks.end()) {
-		// track reverses
-		if(iTrack->isReversingX(backlash)) { 
+		// track reverses (only for tracks outside occlusion)
+		if( iTrack->isReversingX(backlash) && !iTrack->isOccluded() ) { 
 			int id = this->nextTrackID();
 
 			// if trackID available: create new track from lastTrackEntry, delete reversing track
@@ -871,25 +882,25 @@ std::list<Track>* SceneTracker::updateTracksIntersect(std::list<cv::Rect>& blobs
 	//1 assign blobs based on occlusion
 	// occluded tracks -> special track update
 	if (isOverlappingTracks()) {
+		// TODO make sure valid references are passed
 		//for_each m_overlaps
 		std::list<Occlusion>::iterator iOcc = m_overlaps.begin();
 		while (iOcc != m_overlaps.end()) {
-
-			// update occluded tracks
-			assignBlobsInOcclusion(*iOcc, blobs);
-	
-			// update remaining tracks
-			assignBlobs(blobs);
-
-			// delete occlusion and unset track occlusion status
-			// after occlusion has been passed
+			// occlusion has been passed or at least one track has been deleted
+			// -> delete occlusion and unset track occlusion status
 			if (iOcc->hasPassed) {
 				iOcc->movingLeft->setOccluded(false);
 				iOcc->movingRight->setOccluded(false);
 				iOcc = m_overlaps.erase(iOcc);
 			
-			// process next occlusion
+			// inside occlusion -> update occluded and regular tracks
 			} else {
+				// update occluded tracks
+				assignBlobsInOcclusion(*iOcc, blobs);
+	
+				// update remaining tracks
+				assignBlobs(blobs);
+
 				++iOcc;
 			}
 		}
@@ -899,17 +910,17 @@ std::list<Track>* SceneTracker::updateTracksIntersect(std::list<cv::Rect>& blobs
 		assignBlobs(blobs);
 	}
 
-	//2 combine tracks
-	combineTracks(m_tracks, m_roiSize);
-
-	//3 delete tracks
+	//2 delete tracks
 	this->deleteMarkedTracks();
 
-	//5 check reversing direction
+	//3 check reversing direction
 	// delete relevant tracks (blobs will be assigned to new track in next update step)
 	this->deleteReversingTracks();
 
-	//6 check occlusion
+	//4 combine tracks
+	combineTracks(m_tracks, m_roiSize);
+
+	//5 check occlusion
 	std::list<Occlusion>* pOcclusions;
 	pOcclusions = setOcclusion();
 
@@ -930,6 +941,7 @@ std::list<Track>* SceneTracker::updateTracksIntersect(std::list<cv::Rect>& blobs
 //////////////////////////////////////////////////////////////////////////////
 
 void adjustSubstPos(const cv::Rect& blob, cv::Rect& rcRight, cv::Rect& rcLeft) {
+	// TODO make sure valid references are passed
 	int mvRight_edgeLeft = rcRight.x;
 	int mvRight_edgeRight = rcRight.x + rcRight.width;
 	int mvLeft_edgeLeft = rcLeft.x;
@@ -977,35 +989,39 @@ std::list<Track>* combineTracks(std::list<Track>& tracks, cv::Size roi) {
 		TiterTracks iTrackComp = iTrack;
 		++iTrackComp;
 
-		// for_each remaining tracks in list
-		while (iTrackComp != tracks.end()) {
+		// combine un-occluded tracks only
+		if (!iTrack->isOccluded()) {
 
-			// track history must have two elements or more in order to compare velocity
-			if (iTrack->getHistory() >= 2 && iTrackComp->getHistory() >= 2) {
+			// for_each remaining tracks in list
+			while (iTrackComp != tracks.end()) {
 
-				bool isSameDirection	= ( signBit(iTrack->getVelocity().x) == signBit(iTrackComp->getVelocity().x) );
-				cv::Rect rcIntersec		= ( iTrack->getActualEntry().rect() & iTrackComp->getActualEntry().rect() );
-				bool isIntersection		= (rcIntersec.area() > 0);
+				// track history must have two elements or more in order to compare velocity
+				if (iTrack->getHistory() >= 2 && iTrackComp->getHistory() >= 2) {
 
-				if (isSameDirection && isIntersection) {
-					// iTrack longer -> assign iTrackComp and delete it afterwards
-					if (iTrack->getHistory() > iTrackComp->getHistory()) {
-						iTrack->addTrackEntry(iTrackComp->getActualEntry().rect(), roi);
-						iTrackComp->markForDeletion();
+					bool isSameDirection	= ( signBit(iTrack->getVelocity().x) == signBit(iTrackComp->getVelocity().x) );
+					cv::Rect rcIntersec		= ( iTrack->getActualEntry().rect() & iTrackComp->getActualEntry().rect() );
+					bool isIntersection		= (rcIntersec.area() > 0);
 
-					// vice versa
-					} else {
-						iTrackComp->addTrackEntry(iTrack->getActualEntry().rect(), roi);
-						iTrack->markForDeletion();
+					if (isSameDirection && isIntersection) {
+						// iTrack longer -> assign iTrackComp and delete it afterwards
+						if (iTrack->getHistory() > iTrackComp->getHistory()) {
+							iTrack->addTrackEntry(iTrackComp->getActualEntry().rect(), roi);
+							iTrackComp->markForDeletion();
+
+						// vice versa
+						} else {
+							iTrackComp->addTrackEntry(iTrack->getActualEntry().rect(), roi);
+							iTrack->markForDeletion();
+						}
 					}
-				}
-			// at least one track has a too short history (fewer than 2 elements) -> do nothing
-			} else {
+				// at least one track has a too short history (fewer than 2 elements) -> do nothing
+				} else {
 			
-			}
+				}
 
-			++iTrackComp;
-		} // end_for_each remaining tracks in list
+				++iTrackComp;
+			} // end_for_each remaining tracks in list
+		} // end_if is_not_occluded
 
 		++iTrack;
 	} // end_for_each track

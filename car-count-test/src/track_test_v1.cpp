@@ -357,3 +357,77 @@ TEST_CASE("#upd004 setLeavingRoiFlag: depending on direction and position of blo
 		}
 	}
 }
+
+
+TEST_CASE("#upd005 updateTrack: mark for deletion, if substitute outside roi", "[Track]") {
+	// empty track 
+	using namespace std;
+	Track track(1);
+	cv::Size roi(100,100);
+	cv::Size blobSize(30,10);
+	cv::Point velocity(10,0);
+	int nUpdates = 4;
+
+	SECTION("blob leaves roi to left") {
+		int orgX = (nUpdates-1) * velocity.x;
+		cv::Point blobOrigin(orgX,0);
+	
+		// create 1st track entry
+		cv::Rect blob(blobOrigin, blobSize);
+		track.addTrackEntry(blob, roi);
+
+		// 4 updates to full confidence-> assignBlob at org(0,0)
+		list<cv::Rect> blobs;
+		for (int i=1; i<=4; ++i) {
+			blobOrigin -= velocity;
+			blob = cv::Rect(blobOrigin, blobSize);
+			blobs.push_back(blob);
+			track.updateTrackIntersect(blobs, roi, 0.2, 4);
+		}
+		//cout << "update within roi: " << track.getActualEntry().rect() << " conf: " << track.getConfidence() << " vel: " << track.getVelocity()<< endl;
+
+		SECTION("next update creates substitute, but still within roi") {
+			track.updateTrackIntersect(blobs, roi, 0.2, 4);
+			REQUIRE( false == track.isMarkedForDelete() );
+			//cout << "subst within roi: " << track.getActualEntry().rect() << " conf: " << track.getConfidence() << endl;
+
+			SECTION("next update outside roi -> mark for deletion") {
+				track.updateTrackIntersect(blobs, roi, 0.2, 4);
+				REQUIRE( true == track.isMarkedForDelete() );
+				//cout << "subst outside roi: " << track.getActualEntry().rect() << " conf: " << track.getConfidence() << endl;
+			}
+		}
+	}
+
+	SECTION("blob leaves roi to right") {
+		// top and left egde are considered inside rect (+1)
+		int orgX = roi.width - blobSize.width - (nUpdates-1) * velocity.x + 1;
+		cv::Point blobOrigin(orgX,0);
+	
+		// create 1st track entry
+		cv::Rect blob(blobOrigin, blobSize);
+		track.addTrackEntry(blob, roi);
+
+		// 4 updates to full confidence-> assignBlob at org(0,0)
+		list<cv::Rect> blobs;
+		for (int i=1; i<=4; ++i) {
+			blobOrigin += velocity;
+			blob = cv::Rect(blobOrigin, blobSize);
+			blobs.push_back(blob);
+			track.updateTrackIntersect(blobs, roi, 0.2, 4);
+		}
+		//cout << "update within roi: " << track.getActualEntry().rect() << " conf: " << track.getConfidence() << " vel: " << track.getVelocity()<< endl;
+
+		SECTION("next update creates substitute, but still within roi") {
+			track.updateTrackIntersect(blobs, roi, 0.2, 4);
+			REQUIRE( false == track.isMarkedForDelete() );
+			//cout << "subst within roi: " << track.getActualEntry().rect() << " conf: " << track.getConfidence() << endl;
+
+			SECTION("next update outside roi -> mark for deletion") {
+				track.updateTrackIntersect(blobs, roi, 0.2, 4);
+				REQUIRE( true == track.isMarkedForDelete() );
+				//cout << "subst outside roi: " << track.getActualEntry().rect() << " conf: " << track.getConfidence() << endl;
+			}
+		}
+	}
+}
