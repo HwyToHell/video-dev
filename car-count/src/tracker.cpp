@@ -6,30 +6,74 @@
 
 using namespace std;
 
-double euclideanDist(const cv::Point& pt1, const cv::Point& pt2)
-{
+double euclideanDist(const cv::Point& pt1, const cv::Point& pt2) {
 	cv::Point diff = pt1 - pt2;
 	return sqrt((double)(diff.x * diff.x + diff.y * diff.y));
 }
 
-double round(double number) // not necessary in C++11
-{
+double round(double number) { // not necessary in C++11
     return number < 0.0 ? ceil(number - 0.5) : floor(number + 0.5);
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// TrackEntry
+// Occlusion
 //////////////////////////////////////////////////////////////////////////////
 
-/* TODO DELETE
-TrackEntry::TrackEntry(int x, int y, int width, int height, ) : m_velocity(velocity) {
-	m_bbox.x = abs(x);
-	m_bbox.y = abs(y);
-	m_bbox.width = abs(width);
-	m_bbox.height = abs(height);
-	m_centroid.x = m_bbox.x + (m_bbox.width / 2);
-	m_centroid.y = m_bbox.y + (m_bbox.height / 2);
-}*/
+std::vector<int> Occlusion::s_idArray;
+
+Occlusion::Init Occlusion::s_initializer;
+
+const int Occlusion::s_maxNoIDs = 9;
+
+Occlusion::Occlusion() {
+	m_id = pullID();
+	std::cout << "c'tor id: " << m_id << endl;
+}
+
+Occlusion::Occlusion(const Occlusion& occ) {
+	m_id = occ.m_id;
+	std::cout << "copy c'tor id: " << m_id << endl;
+}
+
+Occlusion::Occlusion(Occlusion&& occ) {
+	m_id = occ.m_id;
+	std::cout << "move c'tor id: " << m_id << endl;
+}
+
+
+Occlusion::~Occlusion() {
+	returnID(m_id);
+	std::cout << "d'tor return id: " << m_id << endl;
+}
+
+int	Occlusion::pullID() {
+	if (s_idArray.empty()) 
+		return 0;
+	else {
+		int id = s_idArray.back();
+		s_idArray.pop_back();
+		return id;
+	}
+}
+
+int Occlusion::id() {
+	return m_id;
+}
+
+
+bool Occlusion::returnID(int id) {
+	if ( (id > 0 ) && (s_idArray.size() < s_maxNoIDs) ) {
+		s_idArray.push_back(id);
+		return true;
+	} else {
+		return false;
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+// TrackEntry
+//////////////////////////////////////////////////////////////////////////////
 
 TrackEntry::TrackEntry(cv::Rect rect, cv::Point2d velocity) : m_bbox(rect), m_velocity(velocity) {
 	m_centroid.x = m_bbox.x + (m_bbox.width / 2);
@@ -643,8 +687,9 @@ std::list<Track>* SceneTracker::deleteMarkedTracks() {
 	while (iTrack != m_tracks.end()) {
 		if (iTrack->isMarkedForDelete()) {
 			// TODO if occluded -> delete occlusion
-			if (iTrack->isOccluded() {
+			if (iTrack->isOccluded()) {
 				// delete occlusion
+
 			}
 			returnTrackID(iTrack->getId());
 			iTrack = m_tracks.erase(iTrack);

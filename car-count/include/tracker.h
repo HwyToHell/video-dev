@@ -155,12 +155,36 @@ private:
 
 
 /// overlapping tracks
-struct Occlusion {
+class Occlusion {
+// with own id counter
+public:
+				Occlusion();
+				Occlusion(const Occlusion& occ);
+				Occlusion(Occlusion&& occ);
+				~Occlusion();
+	int			id();
+	
 	bool		hasPassed;
 	Track*		movingLeft;
 	Track*		movingRight;
 	cv::Rect	rect;
 	int			remainingUpdateSteps;
+	class		Init {
+	public:
+		inline Init() {
+			for (int i=9; i>=1; --i) {
+				s_idArray.push_back(i);
+			};
+		}
+	};
+
+private:
+	int						pullID();
+	bool					returnID(int id);
+	static Init				s_initializer;
+	static const int		s_maxNoIDs;
+	static std::vector<int> s_idArray;
+	int						m_id;
 };
 
 
