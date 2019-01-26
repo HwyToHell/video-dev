@@ -158,21 +158,24 @@ private:
 class Occlusion {
 // with own id counter
 public:
-				Occlusion();
+				Occlusion(cv::Size roi, Track* movingRight, Track* movingLeft, int steps);
 				Occlusion(const Occlusion& occ);
 				Occlusion(Occlusion&& occ);
 				~Occlusion();
-	int			id();
 	
-	bool		hasPassed;
-	Track*		movingLeft;
-	Track*		movingRight;
-	cv::Rect	rect;
-	int			remainingUpdateSteps;
+	void		assignBlobs(std::list<cv::Rect>& blobs);
+	int			id();
+	bool		hasPassed();
+	Track*		movingLeft();
+	Track*		movingRight();
+	cv::Rect	rect();
+	int			remainingUpdateSteps();
+	cv::Rect	updateRect();
+
 	class		Init {
 	public:
 		inline Init() {
-			for (int i=9; i>=1; --i) {
+			for (int i=s_maxNoIDs; i>=1; --i) {
 				s_idArray.push_back(i);
 			};
 		}
@@ -185,6 +188,12 @@ private:
 	static const int		s_maxNoIDs;
 	static std::vector<int> s_idArray;
 	int						m_id;
+	bool					m_hasPassed;
+	Track*					m_movingLeft;
+	Track*					m_movingRight;
+	cv::Rect				m_rect;
+	int						m_remainingUpdateSteps;
+	cv::Size				m_roiSize;
 };
 
 
@@ -202,7 +211,7 @@ public:
 	std::list<Track>* assignBlobs(std::list<cv::Rect>& blobs);
 
 	/// assign blobs in occlusion area
-	std::list<Track>* assignBlobsInOcclusion(Occlusion& occlusion, std::list<cv::Rect>& blobs);
+	// TODO DELETE std::list<Track>* assignBlobsInOcclusion(Occlusion& occlusion, std::list<cv::Rect>& blobs);
 
 	// TODO reserved for later implementation of data base 
 	void attachCountRecorder(CountRecorder* pRecorder);
@@ -284,7 +293,7 @@ std::list<Track>* combineTracks(std::list<Track>& tracks, cv::Size roi);
 bool isDirectionOpposite(Track& track, Track& trackCompare, const double backlash);
 
 /// distance after next update step (with average velocity) shorter than half velocity 
-bool isNextUpdateOccluded(Track& mvLeft, Track& mvRight);
+bool isNextUpdateOccluded(const Track& mvLeft, const Track& mvRight);
 
 /// return rectangle while tracks are occluded
 cv::Rect occludedArea(Track& mvLeft, Track& mvRight, int updateSteps);
@@ -298,4 +307,4 @@ void printVelocity(Track& track);
 // END_DEBUG
 
 /// steps in occlusion, considering average velocities
-int remainingOccludedUpdateSteps(Track& mvLeft, Track& mvRight);
+int remainingOccludedUpdateSteps(const Track& mvLeft, const Track& mvRight);

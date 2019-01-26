@@ -9,7 +9,8 @@
 int main(int argc, char* argv[]){
 	using namespace std;
 
-	string cases("[Track],[Scene]");
+	//string cases("[Track],[Scene],[Occlusion]");
+	string cases("[Occlusion]");
 	const int ac = 2; // # of cmd line arguments for catch app 
 	const char* av[ac];
 	av[0] = argv[0];

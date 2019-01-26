@@ -12,7 +12,55 @@ void moveDetachedBlobs(const cv::Point velocity, cv::Rect& rcRight, cv::Rect& rc
 void moveOccludedBlobs(const cv::Point velocity, cv::Rect& rcRight, cv::Rect& rcLeft, list<cv::Rect>& blobs);
 
 //////////////////////////////////////////////////////////////////////////////
-// ID handling
+// Occlusion
+//////////////////////////////////////////////////////////////////////////////
+void addOcclusionToList(Track* mvLeft, Track* mvRight, std::list<Occlusion>& oList) {
+	cv::Size roi(100,100);
+	Occlusion occ(roi, mvRight, mvLeft, 1);
+	oList.push_back(occ);
+	return;
+}
+
+TEST_CASE("#id001 pullID, return ID", "[Occlusion]") {
+	Track trackRight(1);
+	Track trackLeft(2);
+	
+	// constructor
+	cv::Size roi(100,100);
+	Occlusion occ(roi, &trackLeft, &trackRight, 1);
+	REQUIRE( 1 == occ.id() );
+
+	//copy constructor
+	Occlusion occ_cpy(occ);
+	REQUIRE( 2 == occ_cpy.id() );
+	REQUIRE( &trackRight == occ_cpy.movingRight() );
+	REQUIRE( &trackLeft == occ_cpy.movingLeft() );
+	REQUIRE( false == occ_cpy.hasPassed() );
+
+	//push to list:
+	//one id used for copy and returned after list has been pushed
+	std::list<Occlusion> occlusions;
+	addOcclusionToList(&trackRight, &trackLeft, occlusions);
+	REQUIRE( 4 == occlusions.back().id() );
+	
+	addOcclusionToList(&trackRight, &trackLeft, occlusions);
+	REQUIRE( 5 == occlusions.back().id() );
+
+	// last ID pulled
+	addOcclusionToList(&trackRight, &trackLeft, occlusions);
+	REQUIRE( 0 == occlusions.back().id() );
+
+	//clear list returns IDs:
+	//#5 used for copy
+	//#4 used for push
+	occlusions.clear();
+	addOcclusionToList(&trackRight, &trackLeft, occlusions);
+	REQUIRE( 4 == occlusions.back().id() );
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+// Scene - ID handling
 //////////////////////////////////////////////////////////////////////////////
 TEST_CASE("#id001 getTrackID, returnTrackID", "[Scene]") {
 	// scene with no tracks
@@ -40,9 +88,9 @@ TEST_CASE("#id001 getTrackID, returnTrackID", "[Scene]") {
 
 
 //////////////////////////////////////////////////////////////////////////////
-// update logic (assgin, combine, delete tracks)
+// Scene - update logic (assgin, combine, delete tracks)
 //////////////////////////////////////////////////////////////////////////////
-TEST_CASE("#ass001 assignBlobs", "[SCENE]") {
+TEST_CASE("#ass001 assignBlobs", "[Scene]") {
 // config with two tracks
 	using namespace std;
 	Config config;	
@@ -109,7 +157,7 @@ TEST_CASE("#ass001 assignBlobs", "[SCENE]") {
 // combine tracks
 	// two tracks: same direction + intersection -> combine, take the one with longer history
 	// two tracks: opposite direction + intersection -> don't combine
-TEST_CASE("#com001 combineTracks", "[SCENE]") {
+TEST_CASE("#com001 combineTracks", "[Scene]") {
 	// start with one long track moving to right (4 history elements)
 	using namespace std;
 	cv::Size roi(100,100);
@@ -190,7 +238,7 @@ TEST_CASE("#com001 combineTracks", "[SCENE]") {
 
 
 
-TEST_CASE("#del001 deleteMarkedTracks", "[SCENE]") {
+TEST_CASE("#del001 deleteMarkedTracks", "[Scene]") {
 // config with two tracks (non intersecting), one marked for deletion
 	using namespace std;
 	Config config;	
@@ -233,7 +281,7 @@ TEST_CASE("#del001 deleteMarkedTracks", "[SCENE]") {
 }
 
 
-TEST_CASE("#del002 deleteReversingTracks", "[SCENE]") {
+TEST_CASE("#del002 deleteReversingTracks", "[Scene]") {
 // config with two tracks, #1 reversing, #2 not reversing
 	using namespace std;
 	Config config;	
@@ -284,7 +332,7 @@ TEST_CASE("#del002 deleteReversingTracks", "[SCENE]") {
 }
 
 
-TEST_CASE("#occ001 isDirectionOpposite", "[SCENE]") {
+TEST_CASE("#occ001 isDirectionOpposite", "[Scene]") {
 	// two tracks moving into opposite direction
 	using namespace std;
 	Track right(1);
@@ -319,7 +367,7 @@ TEST_CASE("#occ001 isDirectionOpposite", "[SCENE]") {
 }
 
 
-TEST_CASE("#occ002 isNextUpdateOccluded", "[SCENE]") {
+TEST_CASE("#occ002 isNextUpdateOccluded", "[Scene]") {
 	// two tracks moving into opposite direction
 	using namespace std;
 	Track right(1);
@@ -372,7 +420,7 @@ TEST_CASE("#occ002 isNextUpdateOccluded", "[SCENE]") {
 }
 
 
-TEST_CASE("#occ003 remainingOccludedUpdateSteps", "[SCENE]") {
+TEST_CASE("#occ003 remainingOccludedUpdateSteps", "[Scene]") {
 	// two tracks moving into opposite direction, next step in occlusion
 	using namespace std;
 	Track right(1);
@@ -418,7 +466,7 @@ TEST_CASE("#occ003 remainingOccludedUpdateSteps", "[SCENE]") {
 }
 
 
-TEST_CASE("#occ004 setOcclusion", "[SCENE]") {
+TEST_CASE("#occ004 setOcclusion", "[Scene]") {
 	// empty config, two tracks (#1 moving to right, #2 moving to left)
 	// will be assigned in SceneTracker::updateIntersect() steps
 	using namespace std;
@@ -483,7 +531,7 @@ TEST_CASE("#occ004 setOcclusion", "[SCENE]") {
 }
 
 
-TEST_CASE("#occ005 calcSubstitute", "[SCENE]") {
+TEST_CASE("#occ005 calcSubstitute", "[Scene]") {
 	// two tracks moving into opposite direction
 	using namespace std;
 	Track right(1);
@@ -515,7 +563,7 @@ TEST_CASE("#occ005 calcSubstitute", "[SCENE]") {
 }
 
 
-TEST_CASE("#occ006 adjustSubstPos", "[SCENE]") {
+TEST_CASE("#occ006 adjustSubstPos", "[Scene]") {
 	// two track entries moving into opposite direction
 	using namespace std;
 	cv::Size rightSize(30,20);
@@ -572,7 +620,7 @@ TEST_CASE("#occ006 adjustSubstPos", "[SCENE]") {
 }
 
 
-TEST_CASE("#occ007 assignBlobsInOcclusion", "[SCENE]") {
+/*TEST_CASE("#occ007 assignBlobsInOcclusion", "[Scene]") {
 	// empty config, create two tracks (#1 moving to right, #2 moving to left)
 	// set occlusion, as next update step will be occluded
 	using namespace std;
@@ -615,7 +663,7 @@ TEST_CASE("#occ007 assignBlobsInOcclusion", "[SCENE]") {
 
 	// set occlusion
 	list<Occlusion>* pOcclusion = scene.setOcclusion();
-	//cout << "occlusion area: " << pOcclusion->front().rect << " remaining steps: " << pOcclusion->front().remainingUpdateSteps << endl;
+	//cout << "occlusion area: " << pOcclusion->front().rect << " remaining steps: " << pOcclusion->front().remainingUpdateSteps() << endl;
 
 	SECTION("1st update -> still two blobs in occlusion area") {
 		moveDetachedBlobs(velocity, rcRight, rcLeft, blobs);
@@ -675,7 +723,7 @@ TEST_CASE("#occ007 assignBlobsInOcclusion", "[SCENE]") {
 					REQUIRE( rcRight == pTracks->front().getActualEntry().rect() ); 
 					REQUIRE( rcLeft == pTracks->back().getActualEntry().rect() ); 
 					// occlusion has been passed
-					REQUIRE( true == pOcclusion->front().hasPassed );
+					REQUIRE( true == pOcclusion->front().hasPassed() );
 				}
 			}
 		}
@@ -712,7 +760,7 @@ TEST_CASE("#occ007 assignBlobsInOcclusion", "[SCENE]") {
 						rcLeft -= velocity;
 						cv::Rect rcMerged = rcRight | rcLeft;
 						blobs.push_back(rcMerged);
-						if (!pOcclusion->front().hasPassed)
+						if (!pOcclusion->front().hasPassed())
 							pTracks = scene.assignBlobsInOcclusion(pOcclusion->front(), blobs);
 						else {
 							blobs.clear();
@@ -742,15 +790,15 @@ TEST_CASE("#occ007 assignBlobsInOcclusion", "[SCENE]") {
 					REQUIRE( rcRight == pTracks->front().getActualEntry().rect() ); 
 					REQUIRE( rcLeft == pTracks->back().getActualEntry().rect() ); 
 					// occlusion has been passed
-					REQUIRE( true == pOcclusion->front().hasPassed );
+					REQUIRE( true == pOcclusion->front().hasPassed() );
 				}
 			}
 		} // "subsequent updates with half velocity"
 	} // "1st update -> still two blobs in occlusion area"
 }
+*/
 
-
-TEST_CASE("#upd001 updateTracksIntersect", "[SCENE]") {
+TEST_CASE("#upd001 updateTracksIntersect", "[Scene]") {
 	// set up config, velocity, scene with 2 tracks
 	// empty config, create scene with two tracks (#1 moving to right, #2 moving to left)
 	using namespace std;
@@ -814,7 +862,7 @@ TEST_CASE("#upd001 updateTracksIntersect", "[SCENE]") {
 				// steps in occlusion: (2 * size + distCurr) / (2 * velocity)
 				int distCurr = rcLeft.x - rcRight.x - rcRight.width;
 				int steps = static_cast<int>( ceil((2 * size.width + distCurr) / static_cast<double>( (2 * velocity.x) )) );
-				REQUIRE( steps == pOcclusions->front().remainingUpdateSteps );
+				REQUIRE( steps == pOcclusions->front().remainingUpdateSteps() );
 
 				// next update steps in occlusion (one occluded blob)
 				for (int i=1; i<=steps; ++i) {
