@@ -3,9 +3,11 @@
 #if defined (_WIN32)
 #pragma warning(disable: 4482) // MSVC10: enum nonstd extension
 #include "../../cpp/inc/observer.h"
+#include "../../cpp/inc/id_pool.h"
 #include "../include/recorder.h"
 #else
 #include "../../cpp/inc/observer.h"
+#include "../../cpp/inc/id_pool.h"
 #include "../include/recorder.h"
 #endif
 
@@ -154,46 +156,32 @@ private:
 };
 
 
-/// overlapping tracks
+/// overlapping tracks = occlusion
 class Occlusion {
 // with own id counter
 public:
-				Occlusion(cv::Size roi, Track* movingRight, Track* movingLeft, int steps);
-				Occlusion(const Occlusion& occ);
-				Occlusion(Occlusion&& occ);
-				~Occlusion();
+				Occlusion(IdGen* pIdGen, cv::Size roi, Track* movingRight, Track* movingLeft, int steps);
+				~Occlusion(); // free ID
 	
 	void		assignBlobs(std::list<cv::Rect>& blobs);
-	int			id();
+	size_t		id();
 	bool		hasPassed();
 	Track*		movingLeft();
 	Track*		movingRight();
 	cv::Rect	rect();
 	int			remainingUpdateSteps();
+	void		setId(size_t id);
 	cv::Rect	updateRect();
 
-	class		Init {
-	public:
-		inline Init() {
-			for (int i=s_maxNoIDs; i>=1; --i) {
-				s_idArray.push_back(i);
-			};
-		}
-	};
-
 private:
-	int						pullID();
-	bool					returnID(int id);
-	static Init				s_initializer;
-	static const int		s_maxNoIDs;
-	static std::vector<int> s_idArray;
-	int						m_id;
-	bool					m_hasPassed;
-	Track*					m_movingLeft;
-	Track*					m_movingRight;
-	cv::Rect				m_rect;
-	int						m_remainingUpdateSteps;
-	cv::Size				m_roiSize;
+	size_t		m_id;
+	IdGen*		m_idGen;
+	bool		m_hasPassed;
+	Track*		m_movingLeft;
+	Track*		m_movingRight;
+	cv::Rect	m_rect;
+	int			m_remainingUpdateSteps;
+	cv::Size	m_roiSize;
 };
 
 
@@ -272,7 +260,8 @@ private:
 
 	// variables
 	CountRecorder*			m_recorder; 
-	std::list<Occlusion>	m_overlaps;
+	std::list<Occlusion>	m_occlusions;
+	IdGen					m_occlusionIDs;
 	std::list<Track>		m_tracks;
 	std::list<int>			m_trackIDs;
 

@@ -33,7 +33,7 @@ bool waitForEnter();
 
 
 
-int main_png(int argc, char* argv[]) {
+int png_main(int argc, char* argv[]) {
 	using namespace std;
 	//string path320("D:/Users/Holger/counter/traffic320x240/");
 	//string path640("D:/Users/Holger/counter/traffic640x480_low_pass/");
@@ -321,7 +321,7 @@ bool trackImageSequence(SceneTracker* pScene, std::string directory, std::string
 			std::list<Occlusion>* pOcc = pScene->getOcclusions();
 			std::list<Occlusion>::iterator iOcc = pOcc->begin();
 			while (iOcc != pOcc->end()) {
-				cv::rectangle(tracks, iOcc->rect, white);
+				cv::rectangle(tracks, iOcc->rect(), white);
 				++iOcc;
 			}
 		}
@@ -345,14 +345,5 @@ bool trackImageSequence(SceneTracker* pScene, std::string directory, std::string
 
 	}
 	
-	return true;
-}
-
-
-bool waitForEnter() {
-	using namespace std;
-	cout << endl << "Press <enter> to exit" << endl;
-	string str;
-	getline(cin, str);
 	return true;
 }
