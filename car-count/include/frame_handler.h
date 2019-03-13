@@ -14,17 +14,29 @@
 //////////////////////////////////////////////////////////////////////////////
 enum Align {left, right};		// C++11: enum class Align {left, right};
 enum Line { thin=1, thick=2};
+enum Key {
+	arrowUp		= 2490368,
+	arrowDown	= 2621440,
+	enter		= 13,
+	escape		= 27,
+	space		= 32,
+};
 
 typedef cv::Rect_ <double> Rect2d; // delete, if opencv > v3.0 
 
-const cv::Scalar black	= cv::Scalar(0,0,0);
-const cv::Scalar blue	= cv::Scalar(255,0,0);
-const cv::Scalar red	= cv::Scalar(0,0,255);
-const cv::Scalar gray	= cv::Scalar(128,128,128);
-const cv::Scalar green	= cv::Scalar(0,255,0);
-const cv::Scalar orange = cv::Scalar(0,128,255);
-const cv::Scalar yellow = cv::Scalar(0,255,255);
-const cv::Scalar white	= cv::Scalar(255,255,255);
+const cv::Scalar black			= cv::Scalar(0,0,0);
+const cv::Scalar blue			= cv::Scalar(255,0,0);
+const cv::Scalar cyan			= cv::Scalar(255,255,0);
+const cv::Scalar red			= cv::Scalar(0,0,255);
+const cv::Scalar gray			= cv::Scalar(128,128,128);
+const cv::Scalar gray_light		= cv::Scalar(192,192,192);
+const cv::Scalar green			= cv::Scalar(0,255,0);
+const cv::Scalar magenta		= cv::Scalar(255,0,255);
+const cv::Scalar magenta_dark	= cv::Scalar(192,0,192);
+const cv::Scalar orange			= cv::Scalar(0,128,255);
+const cv::Scalar purple			= cv::Scalar(128,0,128);
+const cv::Scalar yellow			= cv::Scalar(0,255,255);
+const cv::Scalar white			= cv::Scalar(255,255,255);
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -112,7 +124,6 @@ struct Inset {
 };
 
 
-
 //////////////////////////////////////////////////////////////////////////////
 // FrameHandler //////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -165,3 +176,23 @@ private:
 	Rect2d						m_roi;		// region of interest, within framesize
 	cv::VideoWriter				m_videoOut;
 };
+
+
+//////////////////////////////////////////////////////////////////////////////
+// Functions /////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+bool breakEscContinueEnter();
+
+void printBlobs(cv::Mat& canvas, const std::list<cv::Rect>& blobs);
+
+void printIndex(cv::Mat& canvas, size_t index);
+
+void printOcclusions(cv::Mat& canvas, const std::list<Occlusion>& occlusions);
+
+void printTrack(cv::Mat& canvas, const Track& track, cv::Scalar color);
+
+void printTracks(cv::Mat& canvas, const std::list<Track>& tracks, bool withPrevious = false);
+
+void printTrackInfo(cv::Mat& canvas, const std::list<Track>& tracks);
+
+void showBlobAssignment(std::string winName, const Track& track, cv::Rect blob, cv::Size roi, int id = 0);

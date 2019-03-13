@@ -824,3 +824,195 @@ void FrameHandler::writeFrame() {
 int FrameHandler::getFrameCount() {
 	return m_frameCounter;
 }
+
+
+//////////////////////////////////////////////////////////////////////////////
+// Functions /////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+bool breakEscContinueEnter() {
+	using namespace std;
+	static bool initialized = false;
+			
+	// print help once
+	if (!initialized) {
+		cout << endl << "step through blob time series" << endl;
+		cout << "ENTER: continue" << endl;
+		cout << "ESC:   exit" << endl << endl;
+		initialized = true;
+	}
+
+	// wait for key input (needs at least one highgui window)
+	int key = 0;
+	while ( key != Key::escape && key != Key::enter ) {
+		key = cv::waitKeyEx(0);
+	}
+	if (key == Key::escape)
+		return true;
+	else
+		return false;
+}
+
+
+void printBlobs(cv::Mat& canvas, const std::list<cv::Rect>& blobs) {
+	// appearance
+	cv::Scalar color[] = {white, gray_light, gray};
+	size_t nColors = sizeof(color) / sizeof(color[0]);
+	size_t idx = 0;
+
+	// loop through available blobs
+	std::list<cv::Rect>::const_iterator iBlob = blobs.begin();
+	while (iBlob != blobs.end()) {
+		cv::rectangle(canvas, *iBlob, color[idx % nColors], Line::thin);
+		++iBlob;
+		++idx;
+	}
+	return;
+}
+
+
+void printIndex(cv::Mat& canvas, size_t index) {
+	int font = cv::HersheyFonts::FONT_HERSHEY_SIMPLEX;
+	double fontScale = 0.4;
+	int baseline = 0;
+	std::string idxString("idx #" + std::to_string(static_cast<long long>(index)));
+	cv::Size textSize = cv::getTextSize(idxString, font, fontScale, 1, &baseline);
+	int xOffset = 5;
+	int yOffset = canvas.size().height - textSize.height;
+	cv::putText(canvas, idxString, cv::Point(xOffset, yOffset),
+			font, fontScale, white);
+	return;
+}
+
+
+void printOcclusions(cv::Mat& canvas, const std::list<Occlusion>& occlusions) {
+	// appearance
+	cv::Scalar color[] = {magenta, magenta_dark, purple};
+	size_t nColors = sizeof(color) / sizeof(color[0]);
+	
+	// loop through available occlusions
+	std::list<Occlusion>::const_iterator iOcc = occlusions.begin();
+	while (iOcc != occlusions.end()) {
+		cv::rectangle(canvas, iOcc->rect(), color[iOcc->id() % nColors]);
+		++iOcc;
+	}
+	return;
+}
+
+
+void printTrack(cv::Mat& canvas, const Track& track, cv::Scalar color) {
+	cv::Rect rcActual = track.getActualEntry().rect();
+	cv::Rect rcPrev = track.getPreviousEntry().rect();
+	int id = track.getId();
+	cv::rectangle(canvas, rcActual, color, Line::thick);
+	cv::rectangle(canvas, rcPrev, color, Line::thin);
+	return;
+}
+
+
+void printTracks(cv::Mat& canvas, const std::list<Track>& tracks, bool withPrevious) {
+	// appearance
+	cv::Scalar color[] = {blue, green, red, yellow};
+	size_t nColors = sizeof(color) / sizeof(color[0]);
+
+	// loop through available tracks
+	std::list<Track>::const_iterator iTrack = tracks.begin();
+	while (iTrack != tracks.end()) {
+		int id = iTrack->getId();
+		cv::Rect rcActual = iTrack->getActualEntry().rect();
+		if (withPrevious) {
+			cv::Rect rcPrev = iTrack->getPreviousEntry().rect();
+			cv::rectangle(canvas, rcActual, color[id % nColors], Line::thick);
+			cv::rectangle(canvas, rcPrev, color[id % nColors], Line::thin);
+		} else {
+			cv::rectangle(canvas, rcActual, color[id % nColors], Line::thin);
+		}
+		++iTrack;
+	}
+
+	return;
+}
+
+
+void printTrackInfo(cv::Mat& canvas, const std::list<Track>& tracks) {
+	// appearance
+	cv::Scalar color[] = {blue, green, red, yellow};
+	size_t nColors = sizeof(color) / sizeof(color[0]);	
+	int idxLine = 0;
+
+	std::list<Track>::const_iterator iTrack = tracks.begin();
+	while (iTrack != tracks.end()) {
+
+		// collect track info
+		int confidence = iTrack->getConfidence();
+		int id = iTrack->getId();
+		int length = iTrack->getLength();
+		double velocity = iTrack->getVelocity().x;
+
+		// print track info
+		std::stringstream ss;
+		ss << "#" << id << ", con=" << confidence << ", len=" << length << ", v=" 
+			<< std::fixed << std::setprecision(1) << velocity;
+
+		// split status line, if necessary
+		int xOffset = 5;
+		int font = cv::HersheyFonts::FONT_HERSHEY_SIMPLEX;
+		double fontScale = 0.4;
+		int baseline = 0;
+		cv::Size textSize = cv::getTextSize(ss.str(), font, fontScale, 1, &baseline);
+
+		// fits onto one line 
+		if (textSize.width + (xOffset * 2) < canvas.size().width) {
+			int yOffset = 10 + idxLine * 10;
+			cv::putText(canvas, ss.str(), cv::Point(xOffset, yOffset),
+				font, fontScale, color[id % nColors]);
+
+		// needs two lines
+		} else {
+			size_t pos = std::string::npos;
+			pos = ss.str().find(", len=");
+			std::string line1 = ss.str().substr(0, pos);
+			std::string line2 = ss.str().substr(pos + 2);
+			int yOffset = 10 + idxLine * 20;
+			cv::putText(canvas, line1, cv::Point(xOffset, yOffset),
+				font, fontScale, color[id % nColors]);
+			cv::putText(canvas, line2, cv::Point(xOffset, yOffset + 10),
+				font, fontScale, color[id % nColors]);
+		}
+		++idxLine;
+		++iTrack;
+	} // end_while
+
+	return;
+}
+
+
+void showBlobAssignment(std::string winName, const Track& track, cv::Rect blob, cv::Size roi, int id) {
+	cv::namedWindow(winName);
+	cv::moveWindow(winName, 1060, 0);
+	cv::Mat canvas(roi, CV_8UC3, black);
+	cv::Scalar color[] = {blue, green, red, yellow};
+	size_t nColors = sizeof(color) / sizeof(color[0]);
+
+	printTrack(canvas, track, color[id % nColors]);
+	cv::rectangle(canvas, blob, white);
+
+	cv::Mat canvasLarge;	
+	cv::resize(canvas, canvasLarge,cv::Size(0,0), 2.0, 2.0);
+	cv::imshow(winName, canvasLarge);
+	return;
+}
+
+
+void showTracks(std::string winName, const SceneTracker& scene) {
+	cv::namedWindow(winName);
+	cv::moveWindow(winName, 1060, 0);
+
+	cv::Mat canvas(scene.m_roiSize, CV_8UC3, black);
+	printTracks(canvas, scene.m_tracks);
+	
+	cv::Mat canvasLarge;
+	cv::resize(canvas, canvasLarge,cv::Size(0,0), 2.0, 2.0);
+	printTrackInfo(canvasLarge, scene.m_tracks);
+	cv::imshow(winName, canvasLarge);
+	return;
+}

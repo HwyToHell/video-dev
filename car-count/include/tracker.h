@@ -156,23 +156,25 @@ private:
 };
 
 
-/// overlapping tracks = occlusion
+/// occlusion = overlapping tracks
 class Occlusion {
-// with own id counter
 public:
 				Occlusion(IdGen* pIdGen, cv::Size roi, Track* movingRight, Track* movingLeft, int steps);
+				// copy constructor must be defined, otherwise id will be returned, when copied object is destroyed
+				Occlusion(const Occlusion& src);
+				Occlusion& operator= (Occlusion& src);
 				~Occlusion(); // free ID
 	
 	void		assignBlobs(std::list<cv::Rect>& blobs);
-	size_t		id();
-	bool		hasPassed();
+	size_t		id() const;
+	bool		hasPassed() const;
 	Track*		movingLeft();
 	Track*		movingRight();
-	cv::Rect	rect();
+	cv::Rect	rect() const;
 	int			remainingUpdateSteps();
 	void		setId(size_t id);
 	cv::Rect	updateRect();
-
+	
 private:
 	size_t		m_id;
 	IdGen*		m_idGen;
@@ -233,6 +235,8 @@ public:
 	/// set isOccluded flag for each occluded track, calculates occlusion rectangle
 	std::list<Occlusion>* setOcclusion();
 
+	friend void showTracks(std::string winName, const SceneTracker& scene);
+
 	/// returns motion objects that need to be classified by DNN
 	std::vector<TrackEntry>triggerDNNClassif();
 
@@ -264,8 +268,19 @@ private:
 	IdGen					m_occlusionIDs;
 	std::list<Track>		m_tracks;
 	std::list<int>			m_trackIDs;
-
 };
+
+
+struct TrackState {
+public:
+	TrackState(std::string name, std::list<cv::Rect> blobs, std::list<Occlusion> occlusions, std::list<Track> tracks) : 
+	  m_name(name), m_blobs(blobs), m_occlusions(occlusions), m_tracks(tracks) {};
+	std::string			 m_name;
+	std::list<cv::Rect>  m_blobs;
+	std::list<Occlusion> m_occlusions;
+	std::list<Track>	 m_tracks;
+};
+
 
 /// adjust position of substitute track entry based on blob edges (occluded tracks)
 void adjustSubstPos(const cv::Rect& blob, cv::Rect& rcRight, cv::Rect& rcLeft);
