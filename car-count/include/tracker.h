@@ -20,6 +20,53 @@ inline bool signBit(double x) {return (x < 0) ? true : false;} // use std signbi
 /// configuration class for changeable parameters, declared in config.h
 class Config;
 
+class Track;
+
+/// occlusion = overlapping tracks
+class Occlusion {
+public:
+				Occlusion(cv::Size roi, Track* movingRight, Track* movingLeft, int steps, size_t id = 0);
+				// copy constructor must be defined, otherwise id will be returned, when copied object is destroyed
+				/*Occlusion(const Occlusion& src);
+				Occlusion& operator= (Occlusion& src);
+				~Occlusion(); // free ID
+	*/
+	void		assignBlobs(std::list<cv::Rect>& blobs);
+	Occlusion	clone(); // for debug purposes don't assign new ID for debug occlusion 
+	size_t		id() const;
+	bool		hasPassed() const;
+	Track*		movingLeft();
+	Track*		movingRight();
+	cv::Rect	rect() const;
+	int			remainingUpdateSteps();
+	void		setId(size_t id);
+	cv::Rect	updateRect();
+	
+private:
+	size_t		m_id;
+	//IdGen*		m_idGen;
+	bool		m_hasPassed;
+	Track*		m_movingLeft;
+	Track*		m_movingRight;
+	cv::Rect	m_rect;
+	int			m_remainingUpdateSteps;
+	cv::Size	m_roiSize;
+};
+
+
+class OcclusionIdList {
+public:
+								OcclusionIdList(size_t maxIdCount);
+	bool						add(Occlusion& occlusion);
+	void						assignBlobs(std::list<cv::Rect>& blobs);
+	const std::list<Occlusion>*	getList();
+	bool						isOcclusion();
+private:
+	std::list<Occlusion>		m_occlusions;
+	IdGen						m_occlusionIds;
+};
+
+
 /// representation for a blob (detected geometric moving object) in the track vector 
 class TrackEntry {
 public:
@@ -155,38 +202,6 @@ private:
 	int m_ID;
 };
 
-
-/// occlusion = overlapping tracks
-class Occlusion {
-public:
-				Occlusion(IdGen* pIdGen, cv::Size roi, Track* movingRight, Track* movingLeft, int steps);
-				// copy constructor must be defined, otherwise id will be returned, when copied object is destroyed
-				Occlusion(const Occlusion& src);
-				Occlusion& operator= (Occlusion& src);
-				~Occlusion(); // free ID
-	
-	void		assignBlobs(std::list<cv::Rect>& blobs);
-	size_t		id() const;
-	bool		hasPassed() const;
-	Track*		movingLeft();
-	Track*		movingRight();
-	cv::Rect	rect() const;
-	int			remainingUpdateSteps();
-	void		setId(size_t id);
-	cv::Rect	updateRect();
-	
-private:
-	size_t		m_id;
-	IdGen*		m_idGen;
-	bool		m_hasPassed;
-	Track*		m_movingLeft;
-	Track*		m_movingRight;
-	cv::Rect	m_rect;
-	int			m_remainingUpdateSteps;
-	cv::Size	m_roiSize;
-};
-
-
 /// collection of all tracks, updates them based on the moving blobs from new frame:
 /// create new tracks for unassigned blobs, delete orphaned tracks
 /// evaluate counting criteria (track length, track confidence)
@@ -217,7 +232,7 @@ public:
 	std::list<Track>* deleteReversingTracks();
 
 	/// return pointer to list of overlapping tracks
-	std::list<Occlusion>* getOcclusions();
+	const std::list<Occlusion>* occlusionList();
 
 	/// at least two tracks overlap, based on overlap regions
 	bool isOverlappingTracks();
@@ -233,7 +248,7 @@ public:
 
 	// TODO make private in final version
 	/// set isOccluded flag for each occluded track, calculates occlusion rectangle
-	std::list<Occlusion>* setOcclusion();
+	const std::list<Occlusion>* setOcclusion();
 
 	friend void showTracks(std::string winName, const SceneTracker& scene);
 
@@ -255,30 +270,29 @@ public:
 	// END DEBUG
 private:
 	// changeable parameters (at run-time)
-	ClassifyVehicle			m_classify;
-	cv::Size				m_roiSize;
-	int						m_maxConfidence;
-	double					m_maxDeviation;
-	double					m_maxDist;
-	unsigned int			m_maxNoIDs;
+	ClassifyVehicle		m_classify;
+	cv::Size			m_roiSize;
+	int					m_maxConfidence;
+	double				m_maxDeviation;
+	double				m_maxDist;
+	unsigned int		m_maxNoIDs;
 
 	// variables
-	CountRecorder*			m_recorder; 
-	std::list<Occlusion>	m_occlusions;
-	IdGen					m_occlusionIDs;
-	std::list<Track>		m_tracks;
-	std::list<int>			m_trackIDs;
+	CountRecorder*		m_recorder; 
+	OcclusionIdList		m_occlusions;
+	std::list<Track>	m_tracks;
+	std::list<int>		m_trackIDs;
 };
 
 
 struct TrackState {
 public:
-	TrackState(std::string name, std::list<cv::Rect> blobs, std::list<Occlusion> occlusions, std::list<Track> tracks) : 
-	  m_name(name), m_blobs(blobs), m_occlusions(occlusions), m_tracks(tracks) {};
-	std::string			 m_name;
-	std::list<cv::Rect>  m_blobs;
-	std::list<Occlusion> m_occlusions;
-	std::list<Track>	 m_tracks;
+	TrackState(std::string name, std::list<cv::Rect> blobs, const std::list<Occlusion>* occlusions, std::list<Track> tracks) : 
+	  m_name(name), m_blobs(blobs), m_occlusions(*occlusions), m_tracks(tracks) {};
+	std::string				m_name;
+	std::list<cv::Rect>		m_blobs;
+	std::list<Occlusion>	m_occlusions;
+	std::list<Track>		m_tracks;
 };
 
 
@@ -303,7 +317,8 @@ bool isNextUpdateOccluded(const Track& mvLeft, const Track& mvRight);
 cv::Rect occludedArea(Track& mvLeft, Track& mvRight, int updateSteps);
 
 // DEBUG
-void printRect(Occlusion& occ);
+void printRect(cv::Rect& rect);
+void printTrackRect(Track& track);
 // END_DEBUG
 
 // DEBUG

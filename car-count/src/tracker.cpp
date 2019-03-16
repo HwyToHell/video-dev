@@ -23,47 +23,16 @@ double round(double number) { // not necessary in C++11
 // Occlusion
 //////////////////////////////////////////////////////////////////////////////
 
-Occlusion::Occlusion(IdGen* pIdGen, cv::Size roi, Track* movingLeft, Track* movingRight, int steps) :
-	m_id(pIdGen->allocID()),
-	m_idGen(pIdGen),
+Occlusion::Occlusion(cv::Size roi, Track* movingLeft, Track* movingRight, int steps, size_t id) :
+	m_id(id),
 	m_hasPassed(false),
 	m_movingLeft(movingLeft),	
 	m_movingRight(movingRight),
 	m_remainingUpdateSteps(steps),
-	m_roiSize(roi) {
-	std::cout << "c'tor id: " << m_id << endl;
+	m_roiSize(roi)	
+	{
+		// DEBUG std::cout << "c'tor id: " << m_id << endl;
 }
-
-Occlusion::Occlusion(const Occlusion& src) :
-	m_id(src.m_idGen->allocID()),
-	m_idGen(src.m_idGen),
-	m_hasPassed(src.m_hasPassed),
-	m_movingLeft(src.m_movingLeft),
-	m_movingRight(src.m_movingRight),
-	m_rect(src.m_rect),
-	m_remainingUpdateSteps(src.m_remainingUpdateSteps),
-	m_roiSize(src.m_roiSize) {
-	std::cout << "copy c'tor id: " << m_id << endl;
-}
-
-Occlusion& Occlusion::operator= (Occlusion& src) {
-	std::swap(m_id, src.m_id);
-	m_idGen = src.m_idGen;
-	m_hasPassed = src.m_hasPassed;
-	m_movingLeft = src.m_movingLeft;
-	m_movingRight = src.m_movingRight;
-	m_rect = src.m_rect;
-	m_remainingUpdateSteps = src.m_remainingUpdateSteps;
-	m_roiSize = src.m_roiSize;
-	std::cout << "copy assigned id: " << m_id << endl;
-	return *this;
-}
-
-Occlusion::~Occlusion() {
-	m_idGen->freeID(m_id);
-	std::cout << "d'tor return id: " << m_id << endl;
-}
-
 
 // adjustment based on presumed next update step
 cv::Rect adjustBounds(Track* movingRight, Track* movingLeft) {
@@ -134,10 +103,17 @@ void Occlusion::assignBlobs(std::list<cv::Rect>& blobs) {
 	int mvRight_edgeLeft = m_movingRight->getActualEntry().rect().x;
 	int mvLeft_edgeRight = m_movingLeft->getActualEntry().rect().x
 		+ m_movingLeft->getActualEntry().rect().width;
-	if (mvRight_edgeLeft > mvLeft_edgeRight)
+	if (mvRight_edgeLeft >= mvLeft_edgeRight)
 		m_hasPassed = true;
 
 	return;
+}
+
+Occlusion Occlusion::clone() {
+	Occlusion temp(*this);
+	temp.m_id = this->m_id;
+	std::cout << "clone" << std::endl;
+	return temp;
 }
 
 size_t Occlusion::id() const { return m_id; }
@@ -152,10 +128,70 @@ cv::Rect Occlusion::rect() const { return m_rect; }
 
 int Occlusion::remainingUpdateSteps() { return m_remainingUpdateSteps; }
 
+void Occlusion::setId(size_t id) { m_id = id; }
+
 cv::Rect Occlusion::updateRect() {
 	m_rect = m_movingRight->getActualEntry().rect() | m_movingLeft->getActualEntry().rect();
 	return m_rect;
 }
+
+//////////////////////////////////////////////////////////////////////////////
+// OcclusionIdList
+//////////////////////////////////////////////////////////////////////////////
+OcclusionIdList::OcclusionIdList(size_t maxIdCount) : m_occlusionIds(maxIdCount) {}
+
+bool OcclusionIdList::add(Occlusion& occlusion) {
+	size_t id = m_occlusionIds.allocID();
+	if (id) {
+		occlusion.setId(id);
+		m_occlusions.push_back(occlusion);
+		return true;
+	} else { 
+		std::cerr << "cannot add occlusion, no ID available" << std::endl;
+		return false;
+	}
+}
+
+void OcclusionIdList::assignBlobs(std::list<cv::Rect>& blobs) {
+	// pass blobs by reference in order to make sure they are deleted (passing by value deletes copy only)
+	//for_each m_occlusions
+	std::list<Occlusion>::iterator iOcc = m_occlusions.begin();
+	while (iOcc != m_occlusions.end()) {
+
+		// occlusion has been passed or at least one track has been deleted
+		// -> delete occlusion, return ID, unset track occlusion status
+		if (iOcc->hasPassed()) {
+			iOcc->movingLeft()->setOccluded(false);
+			iOcc->movingRight()->setOccluded(false);
+			m_occlusionIds.freeID(iOcc->id());
+			iOcc = m_occlusions.erase(iOcc);
+			
+		// inside occlusion -> update occluded tracks
+			//
+		} else {
+			// update occluded tracks
+			iOcc->assignBlobs(blobs);
+			++iOcc;
+		}
+	} // end_for_each m_occlusions
+	return;
+}
+		
+	// TODO_END move to OcclusionIdList::assignBlobs()
+
+const std::list<Occlusion>* OcclusionIdList::getList() {
+	return &m_occlusions;
+}
+
+bool OcclusionIdList::isOcclusion() {
+	if (m_occlusions.size() > 0)
+		return true;
+	else
+		return false;
+}
+
+
+
 
 //////////////////////////////////////////////////////////////////////////////
 // TrackEntry
@@ -603,7 +639,7 @@ void Track::updateTrackIntersect(std::list<cv::Rect>& blobs, cv::Size roi, doubl
 
 SceneTracker::SceneTracker(Config* pConfig) : 
 	Observer(pConfig),
-	m_occlusionIDs(3) {
+	m_occlusions(6) {
 	// max number of tracks assignable (9)
 	m_maxNoIDs = stoi(mSubject->getParam("max_n_of_tracks"));
 	for (int i = m_maxNoIDs; i > 0; --i) // fill trackIDs with 9 ints
@@ -830,8 +866,8 @@ std::list<Track>* SceneTracker::deleteReversingTracks() {
 }
 
 
-std::list<Occlusion>* SceneTracker::getOcclusions() {
-	return &m_occlusions;
+const std::list<Occlusion>* SceneTracker::occlusionList() {
+	return m_occlusions.getList();
 }
 
 
@@ -858,11 +894,8 @@ void SceneTracker::inspect(int frameCnt) {
 
 
 bool SceneTracker::isOverlappingTracks() {
-	if (m_occlusions.size() > 0)
-		return true;
-	else
-		return false;
-	}
+	return m_occlusions.isOcclusion();
+}
 
 
 int SceneTracker::nextTrackID()
@@ -891,7 +924,7 @@ bool SceneTracker::returnTrackID(int id)
 }
 
 
-std::list<Occlusion>*  SceneTracker::setOcclusion() {
+const std::list<Occlusion>*  SceneTracker::setOcclusion() {
 	typedef std::list<Track>::iterator TiterTracks;
 	TiterTracks iTrack = m_tracks.begin();
 
@@ -921,16 +954,17 @@ std::list<Occlusion>*  SceneTracker::setOcclusion() {
 
 						if (isNextUpdateOccluded(movesLeft, movesRight)) {
 							int remainingUpdateSteps = remainingOccludedUpdateSteps(movesLeft, movesRight);
-							Occlusion occ(&m_occlusionIDs, m_roiSize, &movesLeft, &movesRight, remainingUpdateSteps);
+							//Occlusion occ(&m_occlusionIDs, m_roiSize, &movesLeft, &movesRight, remainingUpdateSteps);
+							Occlusion occ(m_roiSize, &movesLeft, &movesRight, remainingUpdateSteps);
 							occ.updateRect();
 							//TODO DELETEocc.rect = occludedArea(movesLeft, movesRight, occ.remainingUpdateSteps); 
 				
-							// create occlusion list entry
-							m_occlusions.push_back(occ);
-
-							// mark tracks as occluded
-							movesLeft.setOccluded(true);
-							movesRight.setOccluded(true);
+							// create occlusion list entry (if ID available)
+							if (m_occlusions.add(occ)) {
+								// mark tracks as occluded
+								movesLeft.setOccluded(true);
+								movesRight.setOccluded(true);
+							}	
 						}
 					} // end_if isDirectionOpposite
 				} // end_if track opposite is not occluded
@@ -941,7 +975,7 @@ std::list<Occlusion>*  SceneTracker::setOcclusion() {
 		++iTrack;
 	} // end_for_each track
 
-	return &m_occlusions;
+	return m_occlusions.getList();
 }
 
 
@@ -1016,41 +1050,36 @@ std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs) {
 
 std::list<Track>* SceneTracker::updateTracksIntersect(std::list<cv::Rect>& blobs, long long frameCnt) {
 	// DEBUG
-	std::list<TrackState> dbgTrackState;
-	dbgTrackState.push_back(TrackState("before blob assign", blobs, m_occlusions, m_tracks));
+	using namespace std;
+	std::list<TrackState> traceTrackState;
+	traceTrackState.push_back(TrackState("before blob assign", blobs, m_occlusions.getList(), m_tracks));
+	/*cout << "before occlusion assign - blobs: " << blobs.size() << endl;
+	for_each(blobs.begin(), blobs.end(), printRect);
+	cout << "before occlusion assign - tracks: " << m_tracks.size() << endl;
+	for_each(m_tracks.begin(), m_tracks.end(), printTrackRect);
+	*/
+	// END_DEBUG
 
 	//1 assign blobs based on occlusion
 	// occluded tracks -> special track update
 	if (isOverlappingTracks()) {
-		// TODO make sure valid references are passed
-		//for_each m_occlusions
-		std::list<Occlusion>::iterator iOcc = m_occlusions.begin();
-		while (iOcc != m_occlusions.end()) {
-			// occlusion has been passed or at least one track has been deleted
-			// -> delete occlusion and unset track occlusion status
-			if (iOcc->hasPassed()) {
-				iOcc->movingLeft()->setOccluded(false);
-				iOcc->movingRight()->setOccluded(false);
-				iOcc = m_occlusions.erase(iOcc);
-			
-			// inside occlusion -> update occluded and regular tracks
-			} else {
-				// update occluded tracks
-				iOcc->assignBlobs(blobs);
-	
-				// update remaining tracks
-				assignBlobs(blobs);
+		// first assign blobs in occlusion areas, then remaining blobs
+		m_occlusions.assignBlobs(blobs);
+		assignBlobs(blobs);
 
-				++iOcc;
-			}
-		}
 	// no occluded tracks -> normal track update
 	} else {
 		assignBlobs(blobs);
 	}
 
 	// DEBUG
-	dbgTrackState.push_back(TrackState("after blob assign", blobs, m_occlusions, m_tracks));
+	traceTrackState.push_back(TrackState("after blob assign", blobs, m_occlusions.getList(), m_tracks));
+	/*cout << "after occlusion assign - blobs: " << blobs.size() << endl;
+	for_each(blobs.begin(), blobs.end(), printRect);
+	cout << "after occlusion assign - tracks: " << m_tracks.size() << endl;
+	for_each(m_tracks.begin(), m_tracks.end(), printTrackRect);
+	*/
+	// END_DEBUG
 
 	//2 delete tracks
 	this->deleteMarkedTracks();
@@ -1063,19 +1092,11 @@ std::list<Track>* SceneTracker::updateTracksIntersect(std::list<cv::Rect>& blobs
 	combineTracks(m_tracks, m_roiSize);
 
 	//5 check occlusion
-	std::list<Occlusion>* pOcclusions;
+	const std::list<Occlusion>* pOcclusions;
 	pOcclusions = setOcclusion();
 
-	// DEBUG -> delete after testing
-	/*if (pOcclusions->size() > 0) {
-		for_each(pOcclusions->begin(), pOcclusions->end(), printRect);
-	}
-
-	for_each(m_tracks.begin(), m_tracks.end(), printVelocity);
-	*/
-	
 	// DEBUG
-	g_trackState.push_back(dbgTrackState);	
+	g_trackState.push_back(traceTrackState);	
     return &m_tracks;
 }
 
@@ -1238,11 +1259,15 @@ cv::Rect occludedArea(Track& mvLeft, Track& mvRight, int updateSteps) {
 
 
 // DEBUG
-void printRect(Occlusion& occ) {
-	std::cout << occ.rect() << endl;
+void printRect(cv::Rect& rect) {
+	std::cout << rect << endl;
 	return; 
 }
 
+void printTrackRect(Track& track) {
+	std::cout << track.getActualEntry().rect() << endl;
+	return; 
+}
 
 void printVelocity(Track& track) {
 	int id = track.getId();
@@ -1265,5 +1290,3 @@ int remainingOccludedUpdateSteps(const Track& mvLeft, const Track& mvRight) {
 	int nSteps = static_cast<int>( ceil((dist + widthRight + widthLeft) / velocitySum) );
 	return nSteps;
 }
-
-

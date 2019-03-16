@@ -318,8 +318,8 @@ bool trackImageSequence(SceneTracker* pScene, std::string directory, std::string
 
 		// show occlusion
 		if (pScene->isOverlappingTracks()) {
-			std::list<Occlusion>* pOcc = pScene->getOcclusions();
-			std::list<Occlusion>::iterator iOcc = pOcc->begin();
+			const std::list<Occlusion>* pOcc = pScene->occlusionList();
+			std::list<Occlusion>::const_iterator iOcc = pOcc->begin();
 			while (iOcc != pOcc->end()) {
 				cv::rectangle(tracks, iOcc->rect(), white);
 				++iOcc;

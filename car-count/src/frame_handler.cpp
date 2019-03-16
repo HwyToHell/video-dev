@@ -892,7 +892,12 @@ void printOcclusions(cv::Mat& canvas, const std::list<Occlusion>& occlusions) {
 	// loop through available occlusions
 	std::list<Occlusion>::const_iterator iOcc = occlusions.begin();
 	while (iOcc != occlusions.end()) {
-		cv::rectangle(canvas, iOcc->rect(), color[iOcc->id() % nColors]);
+		cv::Rect rcPrint(iOcc->rect());
+		rcPrint.height += 2;
+		rcPrint.width += 2;
+		rcPrint.x -= 1;
+		rcPrint.y -=1;
+		cv::rectangle(canvas, rcPrint, color[iOcc->id() % nColors]);
 		++iOcc;
 	}
 	return;
