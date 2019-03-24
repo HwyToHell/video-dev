@@ -53,7 +53,7 @@ void Occlusion::assignBlobs(std::list<cv::Rect>& blobs) {
 	while (iBlob != blobs.end()) {
 		cv::Rect intersect = m_rect & *iBlob;
 		// blob predominantly within occlusion area -> remove
-		if (intersect.area() > static_cast<int>(0.8 * iBlob->area()) ) {
+		if (intersect.area() > static_cast<int>(0.7 * iBlob->area()) ) {
 			blobsInOcclusion.push_back(*iBlob);
 			iBlob = blobs.erase(iBlob);
 		} else {
@@ -109,20 +109,13 @@ void Occlusion::assignBlobs(std::list<cv::Rect>& blobs) {
 	return;
 }
 
-Occlusion Occlusion::clone() {
-	Occlusion temp(*this);
-	temp.m_id = this->m_id;
-	std::cout << "clone" << std::endl;
-	return temp;
-}
-
 size_t Occlusion::id() const { return m_id; }
 
 bool Occlusion::hasPassed() const { return m_hasPassed; }
 
-Track* Occlusion::movingLeft() { return m_movingLeft; }
+Track* Occlusion::movingLeft() const { return m_movingLeft; }
 
-Track* Occlusion::movingRight() { return m_movingRight; }
+Track* Occlusion::movingRight() const { return m_movingRight; }
 
 cv::Rect Occlusion::rect() const { return m_rect; }
 
@@ -188,6 +181,10 @@ bool OcclusionIdList::isOcclusion() {
 		return true;
 	else
 		return false;
+}
+
+OcclusionIdList::IterOcclusion OcclusionIdList::remove(IterOcclusion iOcclusion) {
+	return m_occlusions.erase(iOcclusion);
 }
 
 
@@ -401,7 +398,7 @@ cv::Point2d Track::getVelocity() const { return m_avgVelocity; }
 
 bool Track::isCounted() { return m_counted; }
 
-bool Track::isMarkedForDelete() {return m_isMarkedForDelete;}
+bool Track::isMarkedForDelete() const {return m_isMarkedForDelete;}
 
 bool Track::isOccluded() {return m_isOccluded;}
 
@@ -809,6 +806,20 @@ CountResults SceneTracker::countVehicles(int frameCnt) {
 }
 
 
+const std::list<Occlusion>* SceneTracker::deleteOcclusionsWithMarkedTracks() {
+// if one of the tracks is marked for deletion -> remove occlusion from occlusion list
+	OcclusionIdList::IterOcclusion iOcc = m_occlusions.getList()->begin();
+	while (iOcc != m_occlusions.getList()->end()) {
+		if ( iOcc->movingLeft()->isMarkedForDelete() || iOcc->movingRight()->isMarkedForDelete() ) {
+			iOcc = m_occlusions.remove(iOcc);
+		} else {
+			++iOcc;
+		}
+	}
+
+	return m_occlusions.getList();
+}
+
 std::list<Track>* SceneTracker::deleteMarkedTracks() {
 	// delete orphaned tracks and free associated Track-ID
 	typedef std::list<Track>::iterator TiterTracks;
@@ -816,11 +827,6 @@ std::list<Track>* SceneTracker::deleteMarkedTracks() {
 
 	while (iTrack != m_tracks.end()) {
 		if (iTrack->isMarkedForDelete()) {
-			// TODO if occluded -> delete occlusion
-			if (iTrack->isOccluded()) {
-				// delete occlusion
-
-			}
 			returnTrackID(iTrack->getId());
 			iTrack = m_tracks.erase(iTrack);
 		} else {
@@ -1081,7 +1087,8 @@ std::list<Track>* SceneTracker::updateTracksIntersect(std::list<cv::Rect>& blobs
 	*/
 	// END_DEBUG
 
-	//2 delete tracks
+	//2 delete occlusions, then tracks marked for deletion
+	this->deleteOcclusionsWithMarkedTracks();
 	this->deleteMarkedTracks();
 
 	//3 check reversing direction
@@ -1242,7 +1249,7 @@ bool isNextUpdateOccluded(const Track& mvLeft, const Track& mvRight) {
 	// set threshold for distNext in order to compensate for shaky velocity
 	int velocitySum = static_cast<int>(round(abs(mvLeft.getVelocity().x) + mvRight.getVelocity().x) );
 	int threshold = velocitySum / 2;
-	if (distCurr > 0 && distNext < threshold)
+	if (distCurr >= 0 && distNext < threshold)
 		return true;
 	else
 		return false;

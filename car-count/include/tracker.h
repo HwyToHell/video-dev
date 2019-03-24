@@ -26,17 +26,11 @@ class Track;
 class Occlusion {
 public:
 				Occlusion(cv::Size roi, Track* movingRight, Track* movingLeft, int steps, size_t id = 0);
-				// copy constructor must be defined, otherwise id will be returned, when copied object is destroyed
-				/*Occlusion(const Occlusion& src);
-				Occlusion& operator= (Occlusion& src);
-				~Occlusion(); // free ID
-	*/
 	void		assignBlobs(std::list<cv::Rect>& blobs);
-	Occlusion	clone(); // for debug purposes don't assign new ID for debug occlusion 
 	size_t		id() const;
 	bool		hasPassed() const;
-	Track*		movingLeft();
-	Track*		movingRight();
+	Track*		movingLeft() const;
+	Track*		movingRight() const;
 	cv::Rect	rect() const;
 	int			remainingUpdateSteps();
 	void		setId(size_t id);
@@ -54,13 +48,17 @@ private:
 };
 
 
+
+
 class OcclusionIdList {
 public:
+	typedef std::list<Occlusion>::const_iterator IterOcclusion;	
 								OcclusionIdList(size_t maxIdCount);
 	bool						add(Occlusion& occlusion);
 	void						assignBlobs(std::list<cv::Rect>& blobs);
 	const std::list<Occlusion>*	getList();
 	bool						isOcclusion();
+	IterOcclusion				remove(IterOcclusion iOcclusion);
 private:
 	std::list<Occlusion>		m_occlusions;
 	IdGen						m_occlusionIds;
@@ -139,7 +137,7 @@ public:
 	Direction leavingRoiTo();
 
 	/// returns true, if track has been marked for deletion in next update step
-	bool isMarkedForDelete();
+	bool isMarkedForDelete() const;
 
 	/// returns true, if track is occluded by another track
 	bool isOccluded();
@@ -226,6 +224,9 @@ public:
 
 	/// marked tracks are deleted
 	std::list<Track>* deleteMarkedTracks();
+	
+	/// delete occlusions with tracks that are marked for deletion
+	const std::list<Occlusion>* deleteOcclusionsWithMarkedTracks();
 
 	/// reversing tracks are deleted,
 	/// a new track is created from last track entry

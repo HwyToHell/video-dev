@@ -41,7 +41,7 @@ BlobTimeSeries createOcclusion(const cv::Size roi, const cv::Size blob, const un
 	cv::Point colOrgRight(colX-blob.width, 70);
 	
 	// gap between blobs at beginning of movement
-	int minGapX(10);
+	int minGapX(20);
 
 	// velocities
 	cv::Point veloLeft(-5,0);
@@ -462,13 +462,10 @@ int main(int argc, char* argv[]) {
 	// create blobs for occlusion
 	BlobTimeSeries blobTmSer = createOcclusion(roi, sizeBlob, 20);
 	// visualize blobs for debugging purposes
-	examineBlobTimeSeries(blobTmSer, roi);
-
-	return 0;
+	//examineBlobTimeSeries(blobTmSer, roi);
+	//return 0;
 
 	
-	
-	TrackTimeSeries trackTmSer;
 	cv::Mat canvas(roi, CV_8UC3, black);
 
 	// loop through blobList
@@ -478,140 +475,14 @@ int main(int argc, char* argv[]) {
 		// copy blob list of current time step to avoid deletion
 		std::list<cv::Rect> currentBlobs(blobTmSer[g_idx]);
 		std::list<Track>* pTracks =  scene.updateTracksIntersect(currentBlobs, g_idx);
-		std::list<Track> tracks(*pTracks); // debugging only
-		trackTmSer.push_back(tracks); // release: push_back(*pTracks)
-
-		// DEBUG
-		/*
-		canvas.setTo(black);
-		printBlobsAt(canvas, blobTmSer, n);
-		showCanvas("blobs", canvas, 2);
-		*/
-		/*
-		canvas.setTo(black);
-		printTracksAt(canvas, trackTmSer, g_idx);
-		Occlusions* pOccs(scene.getOcclusions());
-		printOcclusions(canvas, pOccs);
-
-		cv::Mat canvasLarge;
-		cv::resize(canvas, canvasLarge,cv::Size(0,0), 2.0, 2.0);
-		printTrackInfoAt(canvasLarge, trackTmSer, g_idx);
-		showCanvas("tracks", canvasLarge, 1);
-		
-		
 		showTrackStateAt(g_trackState, roi, g_idx);
 		if (breakEscContinueEnter())
 			break;
-		*/
+
 	}
 
 	examineTrackState(g_trackState, roi);
-	//showTrackStateAt(g_trackState, roi, 20);
-	//breakEscContinueEnter();
-
-	//	showTrackStateAt(g_trackState, roi, n);
-	
-
-
-	// int error = vis::stepThroughBlobs(canvas, blobTmSer);
-	// if (error == vis::Err::noData) 	cout << "no data in time series" << endl;
 
 	//waitForEnter();
 	return 0;
-}
-
-
-
-
-enum Err { 
-	ok		= 0,
-	noData = 1,
-};
-
-bool stepThroughBlobs(cv::Mat& canvas, const BlobTimeSeries& timeSeries) {
-	using namespace std;
-	// set up window
-	cv::namedWindow("blobs");
-	cv::moveWindow("blobs", 640, 0);
-
-	// check size
-	size_t maxIdx = timeSeries.size();
-	if (maxIdx == 0) {
-		cerr << "time series does not contain any data" << endl;
-		return false;
-	} else {
-		--maxIdx;
-	}
-
-	// print help
-	cout << endl << "blob time series visualization" << endl;
-	cout << "ARROW_UP:   decrease index" << endl;
-	cout << "ARROW_DOWN: increase index" << endl;
-	cout << "ESC:        exit" << endl << endl;
-
-	// loop through time series
-	size_t idx = 0;
-	int key = 0;
-	while (key != Key::escape) {
-		canvas.setTo(black);
-		printBlobsAt(canvas, timeSeries, idx);
-		cv::imshow("blobs", canvas);
-		key = cv::waitKeyEx(0);
-		//cout << "keycode: " << key << endl;
-		switch (key) {
-			case Key::arrowUp:
-				idx = idx > 0 ? --idx : maxIdx;
-				break;
-			case Key::arrowDown:
-				idx = idx < maxIdx ? ++idx : 0;
-				break;
-		}
-		cout << "idx: " << idx << "    \r"; // \r returns to beginning of line
-	}
-	cout << "end time series visualization" << endl;
-	return true;
-}
-
-bool stepThroughTracks(cv::Mat& canvas, const TrackTimeSeries& timeSeries) {
-	using namespace std;
-	// set up window
-	cv::namedWindow("tracks");
-	cv::moveWindow("tracks", 1052, 0);
-
-	// check size
-	size_t maxIdx = timeSeries.size();
-	if (maxIdx == 0) {
-		cerr << "time series does not contain any data" << endl;
-		return false;
-	} else {
-		--maxIdx;
-	}
-
-	// print help
-	cout << endl << "track time series visualization" << endl;
-	cout << "ARROW_UP:   decrease index" << endl;
-	cout << "ARROW_DOWN: increase index" << endl;
-	cout << "ESC:        exit" << endl << endl;
-
-	// loop through time series
-	size_t idx = 0;
-	int key = 0;
-	while (key != Key::escape) {
-		canvas.setTo(black);
-		printTracksAt(canvas, timeSeries, idx);
-		cv::imshow("tracks", canvas);
-		key = cv::waitKeyEx(0);
-		//cout << "keycode: " << key << endl;
-		switch (key) {
-			case Key::arrowUp:
-				idx = idx > 0 ? --idx : maxIdx;
-				break;
-			case Key::arrowDown:
-				idx = idx < maxIdx ? ++idx : 0;
-				break;
-		}
-		cout << "idx: " << idx << "    \r"; // \r returns to beginning of line
-	}
-	cout << "end time series visualization" << endl;
-	return true;
 }
