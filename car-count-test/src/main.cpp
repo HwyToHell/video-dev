@@ -4,6 +4,13 @@
 #include <iostream>
 #include <string>
 
+#include <opencv2/opencv.hpp>
+#include "../../app-dev/cpp/inc/pick_list.h"
+#include "../../app-dev/video-dev/car-count/include/tracker.h"
+
+Track createTrackAt(const cv::Size roi, const cv::Point blobPos, const cv::Size blobSize, const cv::Point velocity, const size_t id);
+Occlusion createOcclusionAt(Track& trackRight, Track& trackLeft,
+	const cv::Size roi,  const int collisionX, const cv::Size blobSize, const cv::Point velocityRight, const cv::Point velocityLeft);
 
 
 int main(int argc, char* argv[]){
@@ -15,6 +22,20 @@ int main(int argc, char* argv[]){
 	const char* av[ac];
 	av[0] = argv[0];
 	av[1] = cases.c_str();
+
+	// test functions
+	cv::Size roi(100,100);
+	cv::Point velRight(6,0);
+	cv::Point velLeft(-5,0);
+	cv::Point blobPos(10,70);
+	cv::Size blobSize(30,20);
+
+	Track track = createTrackAt(roi, blobPos, blobSize, velLeft, 1);
+	Track trackRight;
+	Track trackLeft;
+	Occlusion occ = createOcclusionAt(trackRight, trackLeft, roi, 50, blobSize, velRight, velLeft);
+	waitForEnter();
+	return 0;
 
 	int result = Catch::Session().run(ac, av);
 	//int result = Catch::Session().run(argc, argv);

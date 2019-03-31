@@ -11,15 +11,8 @@
 #include "../include/recorder.h"
 #endif
 
-// helper functions
-double euclideanDist(const cv::Point& pt1, const cv::Point& pt2);
-double round(double number); // not necessary in C++11
-inline bool signBit(double x) {return (x < 0) ? true : false;} // use std signbit in C++11
-
-
-/// configuration class for changeable parameters, declared in config.h
+// forward decls
 class Config;
-
 class Track;
 
 /// occlusion = overlapping tracks
@@ -95,9 +88,6 @@ public:
 	/// \param[in] blob initial track entry
 	/// \param[in] id track ID
     Track(int id = 0);
-
-	/// assignment operator
-	Track& operator= (const Track& source);
 	
 	/// adds motion detection to track
 	/// blob is clipped, if outside roi area (non-const parameter)
@@ -232,14 +222,14 @@ public:
 	/// a new track is created from last track entry
 	std::list<Track>* deleteReversingTracks();
 
-	/// return pointer to list of overlapping tracks
-	const std::list<Occlusion>* occlusionList();
-
 	/// at least two tracks overlap, based on overlap regions
 	bool isOverlappingTracks();
 
 	/// returns ID for new track, if max number of tracks not exceeded
 	int nextTrackID();
+
+	/// return pointer to list of overlapping tracks
+	const std::list<Occlusion>* occlusionList();
 
 	// TODO delete
 	void printVehicles();
@@ -296,6 +286,15 @@ public:
 	std::list<Track>		m_tracks;
 };
 
+
+//////////////////////////////////////////////////////////////////////////////
+// Functions /////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+// math helper functions
+double euclideanDist(const cv::Point& pt1, const cv::Point& pt2);
+double round(double number); // not necessary in C++11
+inline bool signBit(double x) {return (x < 0) ? true : false;} // use std::signbit in C++11
 
 /// adjust position of substitute track entry based on blob edges (occluded tracks)
 void adjustSubstPos(const cv::Rect& blob, cv::Rect& rcRight, cv::Rect& rcLeft);

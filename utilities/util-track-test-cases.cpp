@@ -483,6 +483,6 @@ int main(int argc, char* argv[]) {
 
 	examineTrackState(g_trackState, roi);
 
-	//waitForEnter();
+	waitForEnter();
 	return 0;
 }

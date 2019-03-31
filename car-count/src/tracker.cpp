@@ -243,18 +243,12 @@ int TrackEntry::width() const {
 // Track /////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-
-// TODO 2)	Track constructor: use ID as parameter only
 Track::Track(int id) : m_avgVelocity(0,0), m_confidence(0),
 	m_counted(false), m_id(id), m_isMarkedForDelete(false), m_isOccluded(false),
 	m_leavingRoiTo(Direction::none), m_prevAvgVelocity(0,0)  {
 }
 
-Track& Track::operator= (const Track& source) {
-	m_history = source.m_history;
-	return *this;
-}
-
+/// local function: velocity difference between new blob and last track entry 
 cv::Point diffVelocity(cv::Rect& blob, Track* const track, const cv::Size roi);
 
 bool outsideRoi(const cv::Rect& rect, const cv::Size roi) {

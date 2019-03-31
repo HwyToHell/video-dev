@@ -14,6 +14,7 @@ void moveOccludedBlobs(const cv::Point velocity, cv::Rect& rcRight, cv::Rect& rc
 //////////////////////////////////////////////////////////////////////////////
 // Occlusion
 //////////////////////////////////////////////////////////////////////////////
+// TODO delete
 void addOcclusionToList(Track* mvLeft, Track* mvRight, std::list<Occlusion>& oList) {
 	cv::Size roi(100,100);
 	Occlusion occ(roi, mvRight, mvLeft, 1);
@@ -21,6 +22,8 @@ void addOcclusionToList(Track* mvLeft, Track* mvRight, std::list<Occlusion>& oLi
 	return;
 }
 
+
+// TODO id()
 TEST_CASE("#id001 pullID, return ID", "[Occlusion]") {
 	Track trackRight(1);
 	Track trackLeft(2);
@@ -509,7 +512,7 @@ TEST_CASE("#occ004 setOcclusion", "[Scene]") {
 	//cout << "moving left:  " << pTracks->back().getActualEntry().rect()	<< " velocity: " << pTracks->back().getVelocity() << endl;
 
 	SECTION("next step will be occluded -> set occlusion structure and isOccluded bit for both tracks") {
-		list<Occlusion>* pOcclusion = scene.setOcclusion();
+		const list<Occlusion>* pOcclusion = scene.setOcclusion();
 		REQUIRE( 1 == pOcclusion->size() );
 		REQUIRE( true == pTracks->front().isOccluded() );
 		REQUIRE( true == pTracks->back().isOccluded() );
@@ -517,7 +520,7 @@ TEST_CASE("#occ004 setOcclusion", "[Scene]") {
 			SECTION("setOcclusion only once (reset in updateTracksIntersect)") {
 				// occlusion list contains still one element
 				// and it will be deleted after nRemainingUpdateSteps (decremented in updateTracksIntersect)
-				list<Occlusion>* pOcclusion = scene.setOcclusion();
+				const list<Occlusion>* pOcclusion = scene.setOcclusion();
 				REQUIRE( 1 == pOcclusion->size() );
 
 				// find track #1 and #2 by ID
@@ -798,6 +801,7 @@ TEST_CASE("#occ006 adjustSubstPos", "[Scene]") {
 }
 */
 
+/*
 TEST_CASE("#upd001 updateTracksIntersect", "[Scene]") {
 	// set up config, velocity, scene with 2 tracks
 	// empty config, create scene with two tracks (#1 moving to right, #2 moving to left)
@@ -848,7 +852,7 @@ TEST_CASE("#upd001 updateTracksIntersect", "[Scene]") {
 		SECTION("create occlusion") {
 			// next update -> create occlusion (blobs still detached)
 			// no occlusion before update
-			list<Occlusion>* pOcclusions = scene.setOcclusion();
+			const list<Occlusion>* pOcclusions = scene.setOcclusion();
 			REQUIRE( 0 == pOcclusions->size() );
 
 			moveDetachedBlobs(velocity, rcRight, rcLeft, blobs);
@@ -896,6 +900,7 @@ TEST_CASE("#upd001 updateTracksIntersect", "[Scene]") {
 		}
 	}
 }
+*/
 
 
 //////////////////////////////////////////////////////////////////////////////
