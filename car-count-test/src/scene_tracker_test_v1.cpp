@@ -11,61 +11,11 @@ void moveDetachedBlobs(const cv::Point velocity, cv::Rect& rcRight, cv::Rect& rc
 /// move rcRight and rcLeft with velocity, combine them to merged blob, push it to blob list
 void moveOccludedBlobs(const cv::Point velocity, cv::Rect& rcRight, cv::Rect& rcLeft, list<cv::Rect>& blobs);
 
-//////////////////////////////////////////////////////////////////////////////
-// Occlusion
-//////////////////////////////////////////////////////////////////////////////
-// TODO delete
-void addOcclusionToList(Track* mvLeft, Track* mvRight, std::list<Occlusion>& oList) {
-	cv::Size roi(100,100);
-	Occlusion occ(roi, mvRight, mvLeft, 1);
-	oList.push_back(occ);
-	return;
-}
-
-
-// TODO id()
-TEST_CASE("#id001 pullID, return ID", "[Occlusion]") {
-	Track trackRight(1);
-	Track trackLeft(2);
-	
-	// constructor
-	cv::Size roi(100,100);
-	Occlusion occ(roi, &trackLeft, &trackRight, 1);
-	REQUIRE( 1 == occ.id() );
-
-	//copy constructor
-	Occlusion occ_cpy(occ);
-	REQUIRE( 2 == occ_cpy.id() );
-	REQUIRE( &trackRight == occ_cpy.movingRight() );
-	REQUIRE( &trackLeft == occ_cpy.movingLeft() );
-	REQUIRE( false == occ_cpy.hasPassed() );
-
-	//push to list:
-	//one id used for copy and returned after list has been pushed
-	std::list<Occlusion> occlusions;
-	addOcclusionToList(&trackRight, &trackLeft, occlusions);
-	REQUIRE( 4 == occlusions.back().id() );
-	
-	addOcclusionToList(&trackRight, &trackLeft, occlusions);
-	REQUIRE( 5 == occlusions.back().id() );
-
-	// last ID pulled
-	addOcclusionToList(&trackRight, &trackLeft, occlusions);
-	REQUIRE( 0 == occlusions.back().id() );
-
-	//clear list returns IDs:
-	//#5 used for copy
-	//#4 used for push
-	occlusions.clear();
-	addOcclusionToList(&trackRight, &trackLeft, occlusions);
-	REQUIRE( 4 == occlusions.back().id() );
-}
-
 
 //////////////////////////////////////////////////////////////////////////////
 // Scene - ID handling
 //////////////////////////////////////////////////////////////////////////////
-TEST_CASE("#id001 getTrackID, returnTrackID", "[Scene]") {
+TEST_CASE("#sce001 getTrackID, returnTrackID", "[Scene]") {
 	// scene with no tracks
 	using namespace std;
 	Config config;
@@ -93,7 +43,7 @@ TEST_CASE("#id001 getTrackID, returnTrackID", "[Scene]") {
 //////////////////////////////////////////////////////////////////////////////
 // Scene - update logic (assgin, combine, delete tracks)
 //////////////////////////////////////////////////////////////////////////////
-TEST_CASE("#ass001 assignBlobs", "[Scene]") {
+TEST_CASE("#sce002 assignBlobs", "[Scene]") {
 // config with two tracks
 	using namespace std;
 	Config config;	
@@ -160,7 +110,7 @@ TEST_CASE("#ass001 assignBlobs", "[Scene]") {
 // combine tracks
 	// two tracks: same direction + intersection -> combine, take the one with longer history
 	// two tracks: opposite direction + intersection -> don't combine
-TEST_CASE("#com001 combineTracks", "[Scene]") {
+TEST_CASE("#sce003 combineTracks", "[Scene]") {
 	// start with one long track moving to right (4 history elements)
 	using namespace std;
 	cv::Size roi(100,100);
@@ -241,7 +191,7 @@ TEST_CASE("#com001 combineTracks", "[Scene]") {
 
 
 
-TEST_CASE("#del001 deleteMarkedTracks", "[Scene]") {
+TEST_CASE("#sce004 deleteMarkedTracks", "[Scene]") {
 // config with two tracks (non intersecting), one marked for deletion
 	using namespace std;
 	Config config;	
@@ -284,7 +234,10 @@ TEST_CASE("#del001 deleteMarkedTracks", "[Scene]") {
 }
 
 
-TEST_CASE("#del002 deleteReversingTracks", "[Scene]") {
+TEST_CASE("#sce005 deleteOcclusionWithMarkedTracks", "[Scene]") {}
+
+
+TEST_CASE("#sce006 deleteReversingTracks", "[Scene]") {
 // config with two tracks, #1 reversing, #2 not reversing
 	using namespace std;
 	Config config;	
@@ -335,7 +288,7 @@ TEST_CASE("#del002 deleteReversingTracks", "[Scene]") {
 }
 
 
-TEST_CASE("#occ001 isDirectionOpposite", "[Scene]") {
+TEST_CASE("#sce007 isDirectionOpposite", "[Scene]") {
 	// two tracks moving into opposite direction
 	using namespace std;
 	Track right(1);
@@ -370,7 +323,7 @@ TEST_CASE("#occ001 isDirectionOpposite", "[Scene]") {
 }
 
 
-TEST_CASE("#occ002 isNextUpdateOccluded", "[Scene]") {
+TEST_CASE("#sce008 isNextUpdateOccluded", "[Scene]") {
 	// two tracks moving into opposite direction
 	using namespace std;
 	Track right(1);
@@ -423,7 +376,7 @@ TEST_CASE("#occ002 isNextUpdateOccluded", "[Scene]") {
 }
 
 
-TEST_CASE("#occ003 remainingOccludedUpdateSteps", "[Scene]") {
+TEST_CASE("#sce009 remainingOccludedUpdateSteps", "[Scene]") {
 	// two tracks moving into opposite direction, next step in occlusion
 	using namespace std;
 	Track right(1);
@@ -469,7 +422,7 @@ TEST_CASE("#occ003 remainingOccludedUpdateSteps", "[Scene]") {
 }
 
 
-TEST_CASE("#occ004 setOcclusion", "[Scene]") {
+TEST_CASE("#sce010 setOcclusion", "[Scene]") {
 	// empty config, two tracks (#1 moving to right, #2 moving to left)
 	// will be assigned in SceneTracker::updateIntersect() steps
 	using namespace std;
@@ -534,7 +487,7 @@ TEST_CASE("#occ004 setOcclusion", "[Scene]") {
 }
 
 
-TEST_CASE("#occ005 calcSubstitute", "[Scene]") {
+TEST_CASE("#sce011 calcSubstitute", "[Scene]") {
 	// two tracks moving into opposite direction
 	using namespace std;
 	Track right(1);
@@ -566,7 +519,7 @@ TEST_CASE("#occ005 calcSubstitute", "[Scene]") {
 }
 
 
-TEST_CASE("#occ006 adjustSubstPos", "[Scene]") {
+TEST_CASE("#sce012 adjustSubstPos", "[Scene]") {
 	// two track entries moving into opposite direction
 	using namespace std;
 	cv::Size rightSize(30,20);

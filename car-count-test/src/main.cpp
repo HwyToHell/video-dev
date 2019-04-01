@@ -23,6 +23,7 @@ int main(int argc, char* argv[]){
 	av[0] = argv[0];
 	av[1] = cases.c_str();
 
+	/*
 	// test functions
 	cv::Size roi(100,100);
 	cv::Point velRight(6,0);
@@ -36,6 +37,7 @@ int main(int argc, char* argv[]){
 	Occlusion occ = createOcclusionAt(trackRight, trackLeft, roi, 50, blobSize, velRight, velLeft);
 	waitForEnter();
 	return 0;
+	*/
 
 	int result = Catch::Session().run(ac, av);
 	//int result = Catch::Session().run(argc, argv);

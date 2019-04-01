@@ -5,14 +5,14 @@
 // Track 
 ///////////////////////////////////////////////////////////////////////////////
 
-TEST_CASE( "#id001 getId", "[Track]" ) {
+TEST_CASE( "#trk001 getId", "[Track]" ) {
 	Track track(1);
 	REQUIRE(track.getId() == 1);
 }
 
 
 
-TEST_CASE( "#vel001 addTrackEntry: blob smaller than roi width", "[Track]" ) {
+TEST_CASE( "#trk002 addTrackEntry: blob smaller than roi width", "[Track]" ) {
 	Track track(1);
 	int roiWidth = 100;
 	int roiHeight = 100;
@@ -43,7 +43,7 @@ TEST_CASE( "#vel001 addTrackEntry: blob smaller than roi width", "[Track]" ) {
 }
 
 
-TEST_CASE("#vel002 addTrackEntry: blob covers entire roi width", "[Track]") {
+TEST_CASE("#trk003 addTrackEntry: blob covers entire roi width", "[Track]") {
 	using namespace std;
 	Track track(1);
 	int roiWidth = 100;
@@ -75,7 +75,7 @@ TEST_CASE("#vel002 addTrackEntry: blob covers entire roi width", "[Track]") {
 }
 
 
-TEST_CASE("#vel003 addSubstitute: compose from previous TrackEntry", "[Track]") {
+TEST_CASE("#trk004 addSubstitute: compose from previous TrackEntry", "[Track]") {
 	// track populated with two entries necessary in order to calculate velocity
 	using namespace std;
 	Track track(1);
@@ -103,7 +103,7 @@ TEST_CASE("#vel003 addSubstitute: compose from previous TrackEntry", "[Track]") 
 }
 
 
-TEST_CASE("#vel004 isReversingX: no change within backlash", "[Track]") {
+TEST_CASE("#trk005 isReversingX: no change within backlash", "[Track]") {
 	// track with 3 updates: 
 	// velocity n-1 = 10; velocity n = -1 
 	using namespace std;
@@ -139,7 +139,7 @@ TEST_CASE("#vel004 isReversingX: no change within backlash", "[Track]") {
 	
 
 
-TEST_CASE("#upd001 updateTrack: intersection", "[Track]") {
+TEST_CASE("#trk006 updateTrack: intersection", "[Track]") {
 	// track with two entries, moving to right with velocityX = 10
 	using namespace std;
 	Track track(1);
@@ -176,7 +176,7 @@ TEST_CASE("#upd001 updateTrack: intersection", "[Track]") {
 }
 
 
-TEST_CASE("#upd002 updateTrack: multiple blobs", "[Track]") {
+TEST_CASE("#trk007 updateTrack: multiple blobs", "[Track]") {
 	// track populated with one entry
 	// will be moved to left and to right in test sections
 	using namespace std;
@@ -231,7 +231,7 @@ TEST_CASE("#upd002 updateTrack: multiple blobs", "[Track]") {
 }
 
 
-TEST_CASE("#upd003 updateTrack: confidence in- and decrease", "[Track]") {
+TEST_CASE("#trk008 updateTrack: confidence in- and decrease", "[Track]") {
 	// track populated with one entry
 	using namespace std;
 	Track track(1);
@@ -300,7 +300,7 @@ TEST_CASE("#upd003 updateTrack: confidence in- and decrease", "[Track]") {
 }
 
 
-TEST_CASE("#upd004 setLeavingRoiFlag: depending on direction and position of blob", "[Track]") {
+TEST_CASE("#trk009 setLeavingRoiFlag: depending on direction and position of blob", "[Track]") {
 	// start with empty track, in each section 4 or more updates are necessary
 	using namespace std;
 	Track track(1);
@@ -359,7 +359,7 @@ TEST_CASE("#upd004 setLeavingRoiFlag: depending on direction and position of blo
 }
 
 
-TEST_CASE("#upd005 updateTrack: mark for deletion, if substitute outside roi", "[Track]") {
+TEST_CASE("#trk010 updateTrack: mark for deletion, if substitute outside roi", "[Track]") {
 	// empty track 
 	using namespace std;
 	Track track(1);

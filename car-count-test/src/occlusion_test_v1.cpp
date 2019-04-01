@@ -9,7 +9,11 @@ Track createTrackAt(const cv::Size roi, const cv::Point blobPos, const cv::Size 
 	cv::Rect blobPrev = blobAct - velocity;
 	Track track(id);
 	track.addTrackEntry(blobPrev, roi);
-	track.addTrackEntry(blobAct, roi);
+	std::list<cv::Rect> blobs;
+	blobs.push_back(blobAct);
+	track.updateTrackIntersect(blobs, roi);
+	assert(track.getHistory() == 2);
+	//track.addTrackEntry(blobAct, roi);
 	return track;
 }
 
@@ -50,7 +54,7 @@ Occlusion createOcclusionAt(Track& trackRight, Track& trackLeft, const cv::Size 
 //////////////////////////////////////////////////////////////////////////////
 // Occlusion
 //////////////////////////////////////////////////////////////////////////////
-TEST_CASE("#id001 id (set at construction)", "[Occlusion]") {
+TEST_CASE("#occ001 id (set at construction)", "[Occlusion]") {
 	cv::Size roi(100,100);
 	Track trackRight(1);
 	Track trackLeft(2);
@@ -65,7 +69,7 @@ TEST_CASE("#id001 id (set at construction)", "[Occlusion]") {
 }
 
 
-TEST_CASE("#id002 setId", "[Occlusion]") {
+TEST_CASE("#occ002 setId", "[Occlusion]") {
 	cv::Size roi(100,100);
 	Track trackRight(1);
 	Track trackLeft(2);
@@ -81,7 +85,7 @@ TEST_CASE("#id002 setId", "[Occlusion]") {
 
 
 
-TEST_CASE("#ass001 assignBlobs", "[Occlusion]") {
+TEST_CASE("#occ003 assignBlobs", "[Occlusion]") {
 
 	// setOcclusion based on two occluding tracks
 	cv::Size roi(100,100);
@@ -93,11 +97,20 @@ TEST_CASE("#ass001 assignBlobs", "[Occlusion]") {
 	int collisionPointX = 50;
 
 	Occlusion occ = createOcclusionAt(trackRight, trackLeft, roi, collisionPointX, blobSize, velocityRight, velocityLeft);
+	REQUIRE(1 == trackRight.getConfidence());
+	REQUIRE(1 == trackLeft.getConfidence());
 
+	std::list<cv::Rect> blobs;
 
-	// SECTION 0 blobs
+	SECTION("0 blobs -> calc substitute and decrease confidence") {
+		occ.assignBlobs(blobs);
+		REQUIRE(0 == occ.movingRight()->getConfidence());
+
 
 	// SECTION 1 blob
+	cv::Rect oneBlob = trackRight.getActualEntry().rect() + velocityRight;
+
+	}
 
 	// SECTION 2 blobs
 
