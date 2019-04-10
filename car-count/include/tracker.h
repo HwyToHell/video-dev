@@ -42,7 +42,7 @@ private:
 
 
 
-
+/// collection of occlusions
 class OcclusionIdList {
 public:
 	typedef std::list<Occlusion>::const_iterator IterOcclusion;	

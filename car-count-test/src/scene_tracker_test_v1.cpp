@@ -1,9 +1,11 @@
 #include "stdafx.h"
 #include "../../car-count/include/config.h" // includes tracker.h
+#include "../../car-count/include/frame_handler.h"
 
 using namespace std;
 using namespace cv;
 
+extern bool isVisualTrace;
 
 /// move rcRight and rcLeft with velocity, push them to blob list
 void moveDetachedBlobs(const cv::Point velocity, cv::Rect& rcRight, cv::Rect& rcLeft, list<cv::Rect>& blobs);
@@ -46,21 +48,19 @@ TEST_CASE("#sce001 getTrackID, returnTrackID", "[Scene]") {
 TEST_CASE("#sce002 assignBlobs", "[Scene]") {
 // config with two tracks
 	using namespace std;
+	cv::Size roi(100,100);
 	Config config;	
 	Config* pConfig = &config;
-	config.setParam("roi_width", "100");
-	config.setParam("roi_height", "100");
+	config.setParam("roi_width", to_string(static_cast<long long>(roi.width)));
+	config.setParam("roi_height", to_string(static_cast<long long>(roi.height)));
 	SceneTracker scene(pConfig);
 	//cout << config.getParam("roi_height") << endl;
 
 	cv::Size blobSize(40,10);
-	int velocityX = 10;
-
 	cv::Point blobOriginLeft(0, 0);
 	cv::Rect blobLeft(blobOriginLeft, blobSize);
 
-	int roiWidth = stoi(config.getParam("roi_width"));
-	cv::Point blobOriginRight(roiWidth - blobSize.width, 0);
+	cv::Point blobOriginRight(roi.width - blobSize.width, 0);
 	cv::Rect blobRight(blobOriginRight, blobSize);
 	
 	list<cv::Rect> blobs;
@@ -74,11 +74,12 @@ TEST_CASE("#sce002 assignBlobs", "[Scene]") {
 	REQUIRE( 1 == pTracks->back().getHistory() );
 
 	SECTION("add two related blobs -> two tracks with two history elements") {
+		cv::Point velocity(10,0);
 		// moving to right
-		blobOriginLeft += cv::Point(velocityX, 0);
+		blobOriginLeft += velocity;
 		blobLeft = cv::Rect(blobOriginLeft, blobSize);
 		// moving to left
-		blobOriginRight -= cv::Point(velocityX, 0);
+		blobOriginRight -= velocity;
 		blobRight = cv::Rect(blobOriginRight, blobSize);
 		// push to list
 		blobs.push_back(blobLeft);
@@ -91,15 +92,28 @@ TEST_CASE("#sce002 assignBlobs", "[Scene]") {
 	}
 
 	SECTION("add two un-related blobs -> two additional tracks will be created") {
+		cv::Point velocityUnrelated(0,30);
 		// moving to right
-		blobOriginLeft += cv::Point(velocityX, 30);
+		blobOriginLeft += velocityUnrelated;
 		blobLeft = cv::Rect(blobOriginLeft, blobSize);
 		// moving to left
-		blobOriginRight -= cv::Point(velocityX, 30);
+		blobOriginRight += velocityUnrelated;
 		blobRight = cv::Rect(blobOriginRight, blobSize);
 		// push to list
 		blobs.push_back(blobLeft);
 		blobs.push_back(blobRight);
+
+			// TRACE
+	if (isVisualTrace) {
+		cv::Mat canvas(roi, CV_8UC3, black);
+		printTrack(canvas, pTracks->front(), green);
+		printTrack(canvas, pTracks->back(), yellow);
+		printBlobs(canvas, blobs);
+		cv::imshow("un-related blobs", canvas);
+		breakEscContinueEnter();
+	}
+	// END_TRACE
+
 		// after update: four history elements
 		pTracks = scene.assignBlobs(blobs);
 		REQUIRE( 4 == pTracks->size() );

@@ -187,9 +187,11 @@ void printBlobs(cv::Mat& canvas, const std::list<cv::Rect>& blobs);
 
 void printIndex(cv::Mat& canvas, size_t index);
 
+void printOcclusion(cv::Mat& canvas, const Occlusion& occlusion, const cv::Scalar color);
+
 void printOcclusions(cv::Mat& canvas, const std::list<Occlusion>& occlusions);
 
-void printTrack(cv::Mat& canvas, const Track& track, cv::Scalar color);
+void printTrack(cv::Mat& canvas, const Track& track, const cv::Scalar color);
 
 void printTracks(cv::Mat& canvas, const std::list<Track>& tracks, bool withPrevious = false);
 

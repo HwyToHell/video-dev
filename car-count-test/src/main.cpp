@@ -12,16 +12,19 @@ Track createTrackAt(const cv::Size roi, const cv::Point blobPos, const cv::Size 
 Occlusion createOcclusionAt(Track& trackRight, Track& trackLeft,
 	const cv::Size roi,  const int collisionX, const cv::Size blobSize, const cv::Point velocityRight, const cv::Point velocityLeft);
 
+bool isVisualTrace;
 
 int main(int argc, char* argv[]){
 	using namespace std;
 
 	//string cases("[Track],[Scene],[Occlusion]");
-	string cases("[Occlusion]");
+	string cases("[Scene]");
 	const int ac = 2; // # of cmd line arguments for catch app 
 	const char* av[ac];
 	av[0] = argv[0];
 	av[1] = cases.c_str();
+
+	//cout << cv::getBuildInformation();
 
 	/*
 	// test functions
@@ -38,6 +41,7 @@ int main(int argc, char* argv[]){
 	waitForEnter();
 	return 0;
 	*/
+	isVisualTrace = true;
 
 	int result = Catch::Session().run(ac, av);
 	//int result = Catch::Session().run(argc, argv);

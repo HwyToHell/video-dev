@@ -835,7 +835,7 @@ bool breakEscContinueEnter() {
 			
 	// print help once
 	if (!initialized) {
-		cout << endl << "step through blob time series" << endl;
+		cout << endl << "step through time series" << endl;
 		cout << "ENTER: continue" << endl;
 		cout << "ESC:   exit" << endl << endl;
 		initialized = true;
@@ -884,6 +884,16 @@ void printIndex(cv::Mat& canvas, size_t index) {
 }
 
 
+void printOcclusion(cv::Mat& canvas, const Occlusion& occlusion, const cv::Scalar color) {
+	cv::Rect rcPrint(occlusion.rect());
+	rcPrint.height += 2;
+	rcPrint.width += 2;
+	rcPrint.x -= 1;
+	rcPrint.y -=1;
+	cv::rectangle(canvas, rcPrint, color);
+	return;
+}
+
 void printOcclusions(cv::Mat& canvas, const std::list<Occlusion>& occlusions) {
 	// appearance
 	cv::Scalar color[] = {magenta, magenta_dark, purple};
@@ -892,19 +902,21 @@ void printOcclusions(cv::Mat& canvas, const std::list<Occlusion>& occlusions) {
 	// loop through available occlusions
 	std::list<Occlusion>::const_iterator iOcc = occlusions.begin();
 	while (iOcc != occlusions.end()) {
-		cv::Rect rcPrint(iOcc->rect());
+		/*cv::Rect rcPrint(iOcc->rect());
 		rcPrint.height += 2;
 		rcPrint.width += 2;
 		rcPrint.x -= 1;
 		rcPrint.y -=1;
 		cv::rectangle(canvas, rcPrint, color[iOcc->id() % nColors]);
+		*/
+		printOcclusion(canvas, *iOcc, color[iOcc->id() % nColors]);
 		++iOcc;
 	}
 	return;
 }
 
 
-void printTrack(cv::Mat& canvas, const Track& track, cv::Scalar color) {
+void printTrack(cv::Mat& canvas, const Track& track, const cv::Scalar color) {
 	cv::Rect rcActual = track.getActualEntry().rect();
 	cv::Rect rcPrev = track.getPreviousEntry().rect();
 	int id = track.getId();
@@ -950,7 +962,7 @@ void printTrackInfo(cv::Mat& canvas, const std::list<Track>& tracks) {
 		// collect track info
 		int confidence = iTrack->getConfidence();
 		int id = iTrack->getId();
-		int length = iTrack->getLength();
+		int length = static_cast<int>(iTrack->getLength());
 		double velocity = iTrack->getVelocity().x;
 
 		// print track info
