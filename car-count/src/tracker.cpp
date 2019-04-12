@@ -1051,12 +1051,6 @@ std::list<Track>* SceneTracker::updateTracksIntersect(std::list<cv::Rect>& blobs
 	using namespace std;
 	std::list<TrackState> traceTrackState;
 	traceTrackState.push_back(TrackState("before blob assign", blobs, m_occlusions.getList(), m_tracks));
-	/*cout << "before occlusion assign - blobs: " << blobs.size() << endl;
-	for_each(blobs.begin(), blobs.end(), printRect);
-	cout << "before occlusion assign - tracks: " << m_tracks.size() << endl;
-	for_each(m_tracks.begin(), m_tracks.end(), printTrackRect);
-	*/
-	// END_DEBUG
 
 	//1 assign blobs based on occlusion
 	// occluded tracks -> special track update
