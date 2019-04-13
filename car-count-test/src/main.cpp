@@ -8,17 +8,15 @@
 #include "../../app-dev/cpp/inc/pick_list.h"
 #include "../../app-dev/video-dev/car-count/include/tracker.h"
 
-Track createTrackAt(const cv::Size roi, const cv::Point blobPos, const cv::Size blobSize, const cv::Point velocity, const size_t id);
+Track createTrackAt(cv::Size roi, cv::Point blobPos, cv::Size blobSize, cv::Point velocity, size_t id);
 Occlusion createOcclusionAt(Track& trackRight, Track& trackLeft,
-	const cv::Size roi,  const int collisionX, const cv::Size blobSize, const cv::Point velocityRight, const cv::Point velocityLeft);
-
-bool isVisualTrace;
+	cv::Size roi, int collisionX, cv::Size blobSize, cv::Point velocityRight, cv::Point velocityLeft);
 
 int main(int argc, char* argv[]){
 	using namespace std;
 
-	//string cases("[Track],[Scene],[Occlusion]");
-	string cases("[Scene]");
+	string cases("[Track],[Scene],[Occlusion]");
+	//string cases("[Scene]");
 	const int ac = 2; // # of cmd line arguments for catch app 
 	const char* av[ac];
 	av[0] = argv[0];
@@ -41,7 +39,6 @@ int main(int argc, char* argv[]){
 	waitForEnter();
 	return 0;
 	*/
-	isVisualTrace = true;
 
 	int result = Catch::Session().run(ac, av);
 	//int result = Catch::Session().run(argc, argv);

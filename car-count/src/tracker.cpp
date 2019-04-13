@@ -4,11 +4,14 @@
 #include "../include/config.h"
 #include "../include/recorder.h"
 #include "../include/frame_handler.h"
+#include "../include/tracker.h"
+#include "../../utilities/inc/util-visual-trace.h"
 
 using namespace std;
-// global variables
-extern std::vector<std::list<TrackState>> g_trackState;
-extern int g_idx;
+
+// status variables for visual tracking
+extern TrackStateVec g_trackState;
+extern size_t g_idx;
 
 double euclideanDist(const cv::Point& pt1, const cv::Point& pt2) {
 	cv::Point diff = pt1 - pt2;
@@ -94,7 +97,7 @@ void Occlusion::assignBlobs(std::list<cv::Rect>& blobs) {
 	// adjust occlusion rect after updates
 	this->updateRect();
 
-	// occlusion has been passed -> mark occlution for deletion in updateTracksIntersect
+	// occlusion has been passed -> mark occlution for deletion in updateTracks
 	int mvRight_edgeLeft = m_movingRight->getActualEntry().rect().x;
 	int mvLeft_edgeRight = m_movingLeft->getActualEntry().rect().x
 		+ m_movingLeft->getActualEntry().rect().width;
@@ -613,7 +616,7 @@ void Track::updateTrackIntersect(std::list<cv::Rect>& blobs, cv::Size roi, doubl
 			m_isMarkedForDelete = true;
 		}
 		else
-		// TODO move assignment of substitute after assignment of other tracks (SceneTracker::updateTracksInterSect)
+		// TODO move assignment of substitute after assignment of other tracks (SceneTracker::updateTracks)
 		// reason: if other tracks are assigned, no substitute value needs to be added
 		
 			// if blob outside roi -> mark track for deletion
@@ -674,60 +677,6 @@ std::list<Track>* SceneTracker::assignBlobs(std::list<cv::Rect>& blobs) {
 }
 
 
-/*
-std::list<Track>* SceneTracker::assignBlobsInOcclusion(Occlusion& occlusion, std::list<cv::Rect>& blobs) {
-
-	assert(occlusion.hasPassed == false);
-	
-	// find all blobs in occlusion area and remove from blobs list
-	std::list<cv::Rect> blobsInOcclusion;
-	std::list<cv::Rect>::iterator iBlob = blobs.begin();
-	while (iBlob != blobs.end()) {
-		cv::Rect intersect = occlusion.rect & *iBlob;
-		// blob predominantly within occlusion area -> remove
-		if (intersect.area() > static_cast<int>(0.8 * iBlob->area()) ) {
-			blobsInOcclusion.push_back(*iBlob);
-			iBlob = blobs.erase(iBlob);
-		} else {
-			++iBlob;
-		}
-	}
-
-	// one or zero blobs -> use substitute blobs for track update
-	if (blobsInOcclusion.size() <= 1) {
-
-		// calc substitutes for both occluded tracks
-		cv::Rect rcRight = calcSubstitute(*occlusion.movingRight);
-		cv::Rect rcLeft = calcSubstitute(*occlusion.movingLeft);
-
-		// TODO results not reliable -> further tests needed
-		// one blob -> adjust substitute position based on blob's edges
-		// by keeping the same substitute size (see occlusion.pptx, page 2)
-		//if (blobsInOcclusion.size() == 1) { 
-		//	list<cv::Rect>::iterator iBlobs = blobsInOcclusion.begin();
-		//	adjustSubstPos(*iBlobs, rcRight, rcLeft);
-		//} 
-
-		// add rcRight / Left (original or adjusted)
-		occlusion.movingRight->addTrackEntry(rcRight, m_roiSize);
-		occlusion.movingLeft->addTrackEntry(rcLeft, m_roiSize);
-	
-	// two or more blobs -> regular track update
-	} else {
-		occlusion.movingRight->updateTrackIntersect(blobsInOcclusion, m_roiSize, 0.4, 4); 
-		occlusion.movingLeft->updateTrackIntersect(blobsInOcclusion, m_roiSize, 0.4, 4); 
-	}
-
-	// occlusion has been passed -> mark occlution for deletion in updateTracksIntersect
-	int mvRight_edgeLeft = occlusion.movingRight->getActualEntry().rect().x;
-	int mvLeft_edgeRight = occlusion.movingLeft->getActualEntry().rect().x
-		+ occlusion.movingLeft->getActualEntry().rect().width;
-	if (mvRight_edgeLeft > mvLeft_edgeRight)
-		occlusion.hasPassed = true;
-
-	return &m_tracks;
-}
-*/
 
 void SceneTracker::attachCountRecorder(CountRecorder* pRecorder) {
 	m_recorder = pRecorder;
@@ -812,6 +761,7 @@ const std::list<Occlusion>* SceneTracker::deleteOcclusionsWithMarkedTracks() {
 
 	return m_occlusions.getList();
 }
+
 
 std::list<Track>* SceneTracker::deleteMarkedTracks() {
 	// delete orphaned tracks and free associated Track-ID
@@ -1007,50 +957,12 @@ void SceneTracker::update() {
 }
 
 
-std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs) {
-
-	// assign blobs to existing tracks
-	// delete orphaned tracks and free associated Track-ID
-	//  for_each track
-	std::list<Track>::iterator iTrack = m_tracks.begin();
-	while (iTrack != m_tracks.end())
-	{
-
-		iTrack->updateTrack(blobs, m_roiSize, m_maxConfidence, m_maxDeviation, m_maxDist); // assign new blobs to existing track
-
-		if (iTrack->isMarkedForDelete())
-		{
-			returnTrackID(iTrack->getId());
-			iTrack = m_tracks.erase(iTrack);
-		}
-		else
-			++iTrack;
-	}
-	
-	// create new tracks for unassigned blobs
-	m_trackIDs.sort(std::greater<int>());
-	std::list<cv::Rect>::iterator iBlob = blobs.begin();
-	while (iBlob != blobs.end())
-	{
-		int trackID = nextTrackID();
-		if (trackID > 0) {
-			// TODO check on trackID
-			m_tracks.push_back(Track(trackID));
-			m_tracks.back().addTrackEntry(*iBlob, m_roiSize);
-		}
-		++iBlob;
-	}
-	blobs.clear();
-	
-    return &m_tracks;
-}
-
-
-std::list<Track>* SceneTracker::updateTracksIntersect(std::list<cv::Rect>& blobs, long long frameCnt) {
+std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs, long long frameCnt) {
 	// DEBUG
 	using namespace std;
 	std::list<TrackState> traceTrackState;
 	traceTrackState.push_back(TrackState("before blob assign", blobs, m_occlusions.getList(), m_tracks));
+	// END_DEBUG
 
 	//1 assign blobs based on occlusion
 	// occluded tracks -> special track update

@@ -3,11 +3,12 @@
 #include "../../car-count/include/tracker.h"
 #include "../../car-count/include/frame_handler.h"
 
-extern bool isVisualTrace;
+// enable visual trace
+static bool g_traceOcclusion = false; // static == internal linkage (file)
 
 
 /// create track at blob position with given velocity
-Track createTrackAt(const cv::Size roi, const cv::Point blobPos, const cv::Size blobSize, const cv::Point velocity, const size_t id) {
+Track createTrackAt(cv::Size roi, cv::Point blobPos, cv::Size blobSize, cv::Point velocity, size_t id) {
 	int iUpdates = 2;
 	cv::Rect blobLast(blobPos, blobSize);
 	cv::Rect blobAct = blobLast - iUpdates * velocity;
@@ -29,7 +30,7 @@ Track createTrackAt(const cv::Size roi, const cv::Point blobPos, const cv::Size 
 /// create occlusion at position x
 /// \param[out] trackRight track moving right
 /// \param[out] trackRight track moving left
-Occlusion createOcclusionAt(Track& trackRight, Track& trackLeft, const cv::Size roi,  const int collisionX, const cv::Size blobSize, const cv::Point velocityRight, const cv::Point velocityLeft) {
+Occlusion createOcclusionAt(Track& trackRight, Track& trackLeft, cv::Size roi,  int collisionX, cv::Size blobSize, cv::Point velocityRight, cv::Point velocityLeft) {
 	
 	// adjust collision point, if necessary
 	size_t colXAct(collisionX);
@@ -178,7 +179,7 @@ TEST_CASE("#occ003 assignBlobs", "[Occlusion]") {
 	REQUIRE(2 == trackLeft.getConfidence());
 
 	// TRACE
-	if (isVisualTrace) {
+	if (g_traceOcclusion) {
 		cv::Mat canvas(roi, CV_8UC3, black);
 		printTrack(canvas, trackRight, green);
 		printTrack(canvas, trackLeft, yellow);
@@ -268,7 +269,7 @@ TEST_CASE("#occ003 assignBlobs", "[Occlusion]") {
 		blobs.push_back(blobNoMatch);
 
 		// TRACE
-		if (isVisualTrace) {
+		if (g_traceOcclusion) {
 			cv::Mat canvas(roi, CV_8UC3, black);
 			printBlobs(canvas, blobs);
 			cv::imshow("blobs 3", canvas);
@@ -317,7 +318,7 @@ TEST_CASE("#occ006 hasPassed", "[Occlusion]") {
 		REQUIRE( false == occ.hasPassed() );
 
 			// TRACE
-			if (isVisualTrace) {
+			if (g_traceOcclusion) {
 				cv::Mat canvas(roi, CV_8UC3, black);
 				printTrack(canvas, trackRight, green);
 				printTrack(canvas, trackLeft, yellow);
@@ -446,7 +447,7 @@ TEST_CASE("#ocl002 assignBlobs", "[Occlusion]") {
 	REQUIRE( 4 == blobs.size() );
 
 			// TRACE
-			if (isVisualTrace) {
+			if (g_traceOcclusion) {
 				cv::Mat canvas(roi, CV_8UC3, black);
 				printTrack(canvas, trackRightOcc1, green);
 				printTrack(canvas, trackLeftOcc1, yellow);

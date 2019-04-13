@@ -2,16 +2,14 @@
 #include "../../car-count/include/config.h" // includes tracker.h
 #include "../../car-count/include/frame_handler.h"
 
-using namespace std;
-using namespace cv;
-
-extern bool isVisualTrace;
+// enable visual trace
+static bool g_traceScene = false;
 
 /// create track at blob position with given velocity
 Track createTrackAt(const cv::Size roi, const cv::Point blobPos, const cv::Size blobSize, const cv::Point velocity, const size_t id);
 
 //////////////////////////////////////////////////////////////////////////////
-// Functions /////////////////////////////////////////////////////////////////
+// Functions for setup - tear down ///////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
 struct OppositeTracks {
@@ -50,30 +48,6 @@ OppositeTracks createTracksBeforeOcclusion(const cv::Size roi,  const int collis
 	tracks.left = createTrackAt(roi, orgLeft, blobSizeAct, velocityLeft, 2);
 
 	return tracks;
-}
-
-
-// move rcRight and rcLeft with velocity, push them to blob list
-void moveDetachedBlobs(const cv::Point velocity, cv::Rect& rcRight, cv::Rect& rcLeft, list<cv::Rect>& blobs) {
-	rcRight += velocity;
-	rcLeft -= velocity;
-	blobs.push_back(rcRight);
-	blobs.push_back(rcLeft);
-	return;
-}
-
-
-// move rcRight and rcLeft with velocity, combine them to merged blob, push it to blob list
-void moveOccludedBlobs(const cv::Point velocity, cv::Rect& rcRight, cv::Rect& rcLeft, list<cv::Rect>& blobs) {
-	rcRight += velocity;
-	rcLeft -= velocity;
-	
-	// function only valid for intersecting blobs
-	assert( rcRight.x + rcRight.width >= rcLeft.x ) ;
-
-	cv::Rect rcMerge = rcRight | rcLeft;
-	blobs.push_back(rcMerge);
-	return;
 }
 
 
@@ -167,7 +141,7 @@ TEST_CASE("#sce002 assignBlobs", "[Scene]") {
 		blobs.push_back(blobRight);
 
 	/* TRACE
-	if (isVisualTrace) {
+	if (g_traceScene) {
 		cv::Mat canvas(roi, CV_8UC3, black);
 		printTrack(canvas, pTracks->front(), green);
 		printTrack(canvas, pTracks->back(), yellow);
@@ -551,9 +525,9 @@ TEST_CASE("#sce010 setOcclusion", "[Scene]") {
 		REQUIRE( true == pTracks->front().isOccluded() );
 		REQUIRE( true == pTracks->back().isOccluded() );
 
-			SECTION("setOcclusion only once (reset in updateTracksIntersect)") {
+			SECTION("setOcclusion only once (reset in updateTracks)") {
 				// occlusion list contains still one element
-				// and it will be deleted after nRemainingUpdateSteps (decremented in updateTracksIntersect)
+				// and it will be deleted after nRemainingUpdateSteps (decremented in updateTracks)
 				const list<Occlusion>* pOcclusion = scene.setOcclusion();
 				REQUIRE( 1 == pOcclusion->size() );
 
@@ -659,7 +633,7 @@ TEST_CASE("#sce012 adjustSubstPos", "[Scene]") {
 
 
 
-TEST_CASE("#sce015 updateTracksIntersect", "[Scene]") {
+TEST_CASE("#sce015 updateTracks", "[Scene]") {
 	// set up config, velocity, scene with 2 tracks
 	// empty config, create scene with two tracks (#1 moving to right, #2 moving to left)
 	// config with two tracks
@@ -682,8 +656,8 @@ TEST_CASE("#sce015 updateTracksIntersect", "[Scene]") {
 	OppositeTracks tracks = createTracksBeforeOcclusion(roi, collision, stepsBeforeOcclusion , blobSize, velocityRight, velocityLeft);
 	list<cv::Rect> blobs;
 
-	/*	// TRACE
-	if (isVisualTrace) {
+	// TRACE
+	if (g_traceScene) {
 		cv::Mat canvas(roi, CV_8UC3, black);
 		printTrack(canvas, tracks.right, green);
 		printTrack(canvas, tracks.left, yellow);
@@ -692,7 +666,7 @@ TEST_CASE("#sce015 updateTracksIntersect", "[Scene]") {
 		cv::imshow("tracks", canvas);
 		breakEscContinueEnter();
 	}
-	*/ // END_TRACE
+	// END_TRACE
 
 	SECTION("assign blobs before occlusion") {
 		// next updates -> two detached blobs
@@ -703,7 +677,7 @@ TEST_CASE("#sce015 updateTracksIntersect", "[Scene]") {
 			blobLeft += velocityLeft;
 			blobs.push_back(blobRight);
 			blobs.push_back(blobLeft);
-			list<Track>* pTracks = scene.updateTracksIntersect(blobs, i);
+			list<Track>* pTracks = scene.updateTracks(blobs, i);
 
 			// all blobs have been assigned
 			REQUIRE( 0 == blobs.size() );
@@ -732,7 +706,7 @@ TEST_CASE("#sce015 updateTracksIntersect", "[Scene]") {
 				cv::Rect blobIntersect = blobRight | blobLeft;
 
 				blobs.push_back(blobIntersect);
-				list<Track>* pTracks = scene.updateTracksIntersect(blobs, i);
+				list<Track>* pTracks = scene.updateTracks(blobs, i);
 
 				// all blobs have been assigned
 				REQUIRE( 0 == blobs.size() );
@@ -749,7 +723,7 @@ TEST_CASE("#sce015 updateTracksIntersect", "[Scene]") {
 				REQUIRE( 0 == (blobRight & blobLeft).area() );
 				blobs.push_back(blobRight);
 				blobs.push_back(blobLeft);	
-				list<Track>* pTracks = scene.updateTracksIntersect(blobs, 0);
+				list<Track>* pTracks = scene.updateTracks(blobs, 0);
 				
 				// all blobs have been assigned
 				REQUIRE( 0 == blobs.size() );
@@ -769,7 +743,7 @@ TEST_CASE("#sce015 updateTracksIntersect", "[Scene]") {
 					REQUIRE( 0 == (blobRight & blobLeft).area() );
 					blobs.push_back(blobRight);
 					blobs.push_back(blobLeft);	
-					list<Track>* pTracks = scene.updateTracksIntersect(blobs, 0);
+					list<Track>* pTracks = scene.updateTracks(blobs, 0);
 				
 					// all blobs have been assigned
 					REQUIRE( 0 == blobs.size() );

@@ -14,15 +14,8 @@
 //////////////////////////////////////////////////////////////////////////////
 enum Align {left, right};		// C++11: enum class Align {left, right};
 enum Line { thin=1, thick=2};
-enum Key {
-	arrowUp		= 2490368,
-	arrowDown	= 2621440,
-	enter		= 13,
-	escape		= 27,
-	space		= 32,
-};
 
-typedef cv::Rect_ <double> Rect2d; // delete, if opencv > v3.0 
+typedef cv::Rect_ <double> Rect2d; // TODO delete, if opencv > v3.0 
 
 const cv::Scalar black			= cv::Scalar(0,0,0);
 const cv::Scalar blue			= cv::Scalar(255,0,0);
@@ -176,25 +169,3 @@ private:
 	Rect2d						m_roi;		// region of interest, within framesize
 	cv::VideoWriter				m_videoOut;
 };
-
-
-//////////////////////////////////////////////////////////////////////////////
-// Functions /////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-bool breakEscContinueEnter();
-
-void printBlobs(cv::Mat& canvas, const std::list<cv::Rect>& blobs);
-
-void printIndex(cv::Mat& canvas, size_t index);
-
-void printOcclusion(cv::Mat& canvas, const Occlusion& occlusion, const cv::Scalar color);
-
-void printOcclusions(cv::Mat& canvas, const std::list<Occlusion>& occlusions);
-
-void printTrack(cv::Mat& canvas, const Track& track, const cv::Scalar color);
-
-void printTracks(cv::Mat& canvas, const std::list<Track>& tracks, bool withPrevious = false);
-
-void printTrackInfo(cv::Mat& canvas, const std::list<Track>& tracks);
-
-void showBlobAssignment(std::string winName, const Track& track, cv::Rect blob, cv::Size roi, int id = 0);

@@ -310,7 +310,7 @@ bool trackImageSequence(SceneTracker* pScene, std::string directory, std::string
 
 
 		std::list<Track>* pDebugTracks;
-		pDebugTracks = pScene->updateTracksIntersect(motionRectList, start);
+		pDebugTracks = pScene->updateTracks(motionRectList, start);
 
 		cv::Mat tracks(input.size(), CV_8UC3, black);
 		// show tracks

@@ -610,6 +610,8 @@ bool Config::setParam(std::string name, std::string value) {
 }
 
 
+
+
 // Directory manipulation functions
 std::string& appendDirToPath(std::string& path, const std::string& dir) {
 	#if defined (_WIN32)
@@ -800,4 +802,21 @@ void printCommandOptions() {
 	cout << "-r fps             set camera frame rate" << endl;
 	cout << "-v resolution_ID   set camera resolution ID" << endl; 
 	return;
+}
+
+
+/// set roi size in config
+bool setRoiToConfig(Config* pConfig, cv::Size roi) {
+	using namespace std;
+
+	// set config param roi
+	bool success = pConfig->setParam("roi_width", to_string( static_cast<long long>(roi.width) ));
+	success &= pConfig->setParam("roi_height", to_string( static_cast<long long>(roi.height) ));
+	if (success) {
+		cout << "ROI set to: " << pConfig->getParam("roi_width") << "x" << pConfig->getParam("roi_height") << endl;
+	} else {
+		cerr << "was not able to set ROI correctly" << endl;
+	}
+
+	return success;
 }

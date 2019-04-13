@@ -249,13 +249,10 @@ public:
 	/// update observer's (SceneTracker) parameters from subject (Config)
 	void update();
 
-	/// updates tracks with new motion objects
+	/// updates tracks with new motion objects (new intersection method)
 	/// returns pointer to updated track list
-    std::list<Track>* updateTracks(std::list<cv::Rect>& blobs);
+    std::list<Track>* updateTracks(std::list<cv::Rect>& blobs, long long frameCnt = 0);
 
-	/// update tracks with new intersection method
-	std::list<Track>* updateTracksIntersect(std::list<cv::Rect>& blobs, long long frameCnt);
-	
 	// DEBUG
 	void inspect(int frameCnt);
 	// END DEBUG
