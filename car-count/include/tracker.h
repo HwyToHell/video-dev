@@ -31,7 +31,6 @@ public:
 	
 private:
 	size_t		m_id;
-	//IdGen*		m_idGen;
 	bool		m_hasPassed;
 	Track*		m_movingLeft;
 	Track*		m_movingRight;

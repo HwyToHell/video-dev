@@ -15,7 +15,10 @@ size_t			g_idx = 0;
 //////////////////////////////////////////////////////////////////////////////
 // Local functions ///////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-
+cv::Rect clipAtRoi(cv::Rect rec, cv::Size roi) {
+	cv::Rect rcRoi(cv::Point(0,0), roi);
+	return rec & rcRoi;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 // Implementation of interface ///////////////////////////////////////////////
@@ -44,6 +47,65 @@ bool breakEscContinueEnter() {
 }
 
 
+Occlusion createOcclusionAt(Track& trackRight, Track& trackLeft, cv::Size roi,  int collisionX, cv::Size blobSize, cv::Point velocityRight, cv::Point velocityLeft) {
+	
+	// adjust collision point, if necessary
+	size_t colXAct(collisionX);
+	if (collisionX > roi.width) {
+		std::cerr << "collision point: " << collisionX << "outside roi: " << roi.width << std::endl;
+		colXAct = roi.width / 2;
+		std::cerr << "taking roi/2: " << colXAct << std::endl; 
+	}
+
+	// adjust blob height, if necessary
+	cv::Size blobSizeAct(blobSize);
+	if ((roi.height - blobSize.height - 10) < 0) {
+		blobSizeAct.height = 10;
+		std::cerr << "blob height adjusted to: " << blobSizeAct.height << std::endl;
+	}
+	
+	cv::Point colAct(colXAct, roi.height - blobSize.height - 10);
+	cv::Point orgRight(colAct.x - blobSizeAct.width, colAct.y);
+	cv::Point orgLeft(colAct);
+	trackRight = createTrackAt(roi, orgRight, blobSizeAct, velocityRight, 1);
+	trackLeft = createTrackAt(roi, orgLeft, blobSizeAct, velocityLeft, 2);
+
+	return Occlusion(roi, &trackLeft, &trackRight, 5);
+}
+
+
+Track createTrack(cv::Size roi, cv::Rect end, cv::Point velocity, int steps, size_t id) {
+	Track track;
+	cv::Rect rc(end.tl() - velocity * (steps - 1), end.size());
+	for (int i = 0; i < steps; ++i) {
+		// addTrackEntry modifies rc, if out of roi, thus copy needed
+		cv::Rect rcAdd = rc; 
+		track.addTrackEntry(rcAdd, roi);
+		rc += velocity;
+	}
+	return track;
+}
+
+
+Track createTrackAt(cv::Size roi, cv::Point blobPos, cv::Size blobSize, cv::Point velocity, size_t id) {
+	int iUpdates = 2;
+	cv::Rect blobLast(blobPos, blobSize);
+	cv::Rect blobAct = blobLast - iUpdates * velocity;
+	Track track(id);
+	track.addTrackEntry(blobAct, roi);
+	std::list<cv::Rect> blobs;
+	for (int i = iUpdates; i > 0; --i) {
+		blobAct += velocity;
+		blobs.push_back(blobAct);
+		track.updateTrackIntersect(blobs, roi);
+		assert(blobs.size() == 0);
+	}
+	assert(track.getHistory() == 3);
+	//track.addTrackEntry(blobAct, roi);
+	return track;
+}
+
+
 bool examineBlobTimeSeries(const BlobTimeSeries& blobTmSer, cv::Size roi) {
 	using namespace std;
 
@@ -64,7 +126,8 @@ bool examineBlobTimeSeries(const BlobTimeSeries& blobTmSer, cv::Size roi) {
 	}
 
 	// loop through index, starting at 0
-	int idx = 0, key = 0;
+	size_t idx = 0;
+	int key = 0;
 
 	while (key != Key::escape) {
 
@@ -119,10 +182,100 @@ bool examineTrackState(const TrackStateVec trackState, cv::Size roi) {
 				g_idx = g_idx < maxIdx ? ++g_idx : 0;
 				break;
 		}
-		cout << "idx: " << g_idx << "    \r"; // \r returns to beginning of line
+		// cout << "idx: " << g_idx << "    \r"; // \r returns to beginning of line
 	}
 	cout << "end TrackState visualization" << endl;
 	return true;
+}
+
+
+BlobTimeSeries moveBlobsThroughRoi(const cv::Size& roi, const MovingBlob& right, const MovingBlob& left) {
+	using namespace std;
+	vector<list<cv::Rect>> timeSeries;
+
+	// check velocity direction
+	if (right.velocity.x <= 0) {
+		cout << "velocity to right must be greater than 0" << endl;
+		return timeSeries;
+	}
+	if (left.velocity.x >= 0) {
+		cout << "velocity to left must be less than 0" << endl;
+		return timeSeries;
+	}
+
+	// check blob inside roi
+	cv::Rect roiRect(cv::Point(0,0), roi);
+	cv::Rect rightRect(right.origin, right.size);
+	if ( (roiRect & rightRect).empty() ) {
+		cout << "blob right: " << rightRect << " outside roi" << endl;
+		return timeSeries;
+	}
+	cv::Rect leftRect(left.origin, left.size);
+	if ( (roiRect & leftRect).empty() ) {
+		cout << "blob left: " << leftRect << " outside roi" << endl;
+		return timeSeries;
+	}
+
+	// update steps to go through roi in x coord
+	int nRight = (roi.width - right.origin.x) / right.velocity.x;
+	int nLeft = (left.origin.x + left.size.width) / std::abs(left.velocity.x);
+	int n = nRight > nLeft ? nRight : nLeft;
+
+	// push blobs to list for all update steps
+	for (; n >=0; --n) {
+		list<cv::Rect> blobs;
+
+		// combine rects, if intersection
+		// clip rects, if outside roi
+		cv::Rect intersection = rightRect & leftRect;
+		if ( intersection.empty() ) {
+			blobs.push_back(clipAtRoi(rightRect, roi));
+			blobs.push_back(clipAtRoi(leftRect, roi));
+		} else {
+			blobs.push_back(clipAtRoi(rightRect | leftRect, roi));
+		}
+		
+		timeSeries.push_back(blobs);
+		rightRect += right.velocity;
+		leftRect += left.velocity;
+	}
+	return timeSeries;
+}
+
+
+BlobTimeSeries moveOcclusionThroughRoi(cv::Size roi, MovingBlob right, MovingBlob left, unsigned int collisionX, unsigned int gapStartX) {
+	// collision point
+	int colX = (collisionX == 0) ? roi.width / 2 : collisionX;
+	colX = (colX > roi.width) ? roi.width : colX;
+	cv::Point colOrgLeft(colX,70);
+	cv::Point colOrgRight(colX-right.size.width, 70);
+
+	// update steps
+	int nUpdates = static_cast<int>( ceil (static_cast<double>(gapStartX) / (abs(left.velocity.x) + abs(right.velocity.x)) ) );
+
+	// origin for blob moves to left
+	cv::Point startOrgLeft = colOrgLeft - nUpdates * left.velocity;
+	
+	// origin for blob moves to right		
+	cv::Point startOrgRight = colOrgRight - nUpdates * right.velocity; // - cv::Point(blob.width,0);
+	
+	MovingBlob rightActual(startOrgRight, right.size, right.velocity);
+	MovingBlob leftActual(startOrgLeft, left.size, left.velocity);
+	BlobTimeSeries blobTimeSeries = moveBlobsThroughRoi(roi, rightActual, leftActual);
+
+	return blobTimeSeries;
+}
+
+
+void printBlob(cv::Mat& canvas, cv::Rect blob, cv::Scalar color) {
+	// make size one line smaller for better visibiliy
+	cv::Rect rcPrint(blob);
+	rcPrint.height -= 2;
+	rcPrint.width -= 2;
+	rcPrint.x += 1;
+	rcPrint.y +=1;
+	cv::rectangle(canvas, rcPrint, color, Line::thin);
+	return;
 }
 
 
@@ -135,7 +288,7 @@ void printBlobs(cv::Mat& canvas, const std::list<cv::Rect>& blobs) {
 	// loop through available blobs
 	std::list<cv::Rect>::const_iterator iBlob = blobs.begin();
 	while (iBlob != blobs.end()) {
-		cv::rectangle(canvas, *iBlob, color[idx % nColors], Line::thin);
+		printBlob(canvas, *iBlob, color[idx % nColors]);
 		++iBlob;
 		++idx;
 	}
@@ -153,7 +306,12 @@ void printBlobsAt(cv::Mat& canvas, const BlobTimeSeries& timeSeries, const size_
 		// loop through available blobs
 		list<cv::Rect>::const_iterator iBlob = timeSeries[idx].begin();
 		while (iBlob != timeSeries[idx].end()) {
-			cv::rectangle(canvas, *iBlob, color[idxColor]);
+			cv::Rect rcPrint(*iBlob);
+			rcPrint.height -= 2;
+			rcPrint.width -= 2;
+			rcPrint.x += 1;
+			rcPrint.y +=1;
+			cv::rectangle(canvas, rcPrint, color[idxColor]);
 			++iBlob;
 		}
 
@@ -176,6 +334,7 @@ void printIndex(cv::Mat& canvas, size_t index) {
 
 
 void printOcclusion(cv::Mat& canvas, const Occlusion& occlusion, cv::Scalar color) {
+	// make size one line larger for better visibiliy
 	cv::Rect rcPrint(occlusion.rect());
 	rcPrint.height += 2;
 	rcPrint.width += 2;
@@ -193,13 +352,6 @@ void printOcclusions(cv::Mat& canvas, const std::list<Occlusion>& occlusions) {
 	// loop through available occlusions
 	std::list<Occlusion>::const_iterator iOcc = occlusions.begin();
 	while (iOcc != occlusions.end()) {
-		/*cv::Rect rcPrint(iOcc->rect());
-		rcPrint.height += 2;
-		rcPrint.width += 2;
-		rcPrint.x -= 1;
-		rcPrint.y -=1;
-		cv::rectangle(canvas, rcPrint, color[iOcc->id() % nColors]);
-		*/
 		printOcclusion(canvas, *iOcc, color[iOcc->id() % nColors]);
 		++iOcc;
 	}
@@ -334,7 +486,7 @@ void printTrackInfoAt(cv::Mat& canvas, const TrackTimeSeries& timeSeries, size_t
 		// collect track info
 		int confidence = iTrack->getConfidence();
 		int id = iTrack->getId();
-		int length = iTrack->getLength();
+		int length = static_cast<int>(iTrack->getLength());
 		double velocity = iTrack->getVelocity().x;
 
 		// print track info

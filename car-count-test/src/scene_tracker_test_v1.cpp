@@ -1,12 +1,11 @@
 #include "stdafx.h"
 #include "../../car-count/include/config.h" // includes tracker.h
 #include "../../car-count/include/frame_handler.h"
+#include "D:/Holger/app-dev/video-dev/utilities/inc/util-visual-trace.h"
 
 // enable visual trace
 static bool g_traceScene = false;
 
-/// create track at blob position with given velocity
-Track createTrackAt(const cv::Size roi, const cv::Point blobPos, const cv::Size blobSize, const cv::Point velocity, const size_t id);
 
 //////////////////////////////////////////////////////////////////////////////
 // Functions for setup - tear down ///////////////////////////////////////////

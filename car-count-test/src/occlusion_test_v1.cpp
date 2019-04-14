@@ -2,63 +2,10 @@
 #include "../../car-count/include/config.h" // includes tracker.h
 #include "../../car-count/include/tracker.h"
 #include "../../car-count/include/frame_handler.h"
+#include "D:/Holger/app-dev/video-dev/utilities/inc/util-visual-trace.h"
 
 // enable visual trace
 static bool g_traceOcclusion = false; // static == internal linkage (file)
-
-
-/// create track at blob position with given velocity
-Track createTrackAt(cv::Size roi, cv::Point blobPos, cv::Size blobSize, cv::Point velocity, size_t id) {
-	int iUpdates = 2;
-	cv::Rect blobLast(blobPos, blobSize);
-	cv::Rect blobAct = blobLast - iUpdates * velocity;
-	Track track(id);
-	track.addTrackEntry(blobAct, roi);
-	std::list<cv::Rect> blobs;
-	for (int i = iUpdates; i > 0; --i) {
-		blobAct += velocity;
-		blobs.push_back(blobAct);
-		track.updateTrackIntersect(blobs, roi);
-		assert(blobs.size() == 0);
-	}
-	assert(track.getHistory() == 3);
-	//track.addTrackEntry(blobAct, roi);
-	return track;
-}
-
-
-/// create occlusion at position x
-/// \param[out] trackRight track moving right
-/// \param[out] trackRight track moving left
-Occlusion createOcclusionAt(Track& trackRight, Track& trackLeft, cv::Size roi,  int collisionX, cv::Size blobSize, cv::Point velocityRight, cv::Point velocityLeft) {
-	
-	// adjust collision point, if necessary
-	size_t colXAct(collisionX);
-	if (collisionX > roi.width) {
-		std::cerr << "collision point: " << collisionX << "outside roi: " << roi.width << std::endl;
-		colXAct = roi.width / 2;
-		std::cerr << "taking roi/2: " << colXAct << std::endl; 
-	}
-
-	// adjust blob height, if necessary
-	cv::Size blobSizeAct(blobSize);
-	if ((roi.height - blobSize.height - 10) < 0) {
-		blobSizeAct.height = 10;
-		std::cerr << "blob height adjusted to: " << blobSizeAct.height << std::endl;
-	}
-	
-	cv::Point colAct(colXAct, roi.height - blobSize.height - 10);
-	cv::Point orgRight(colAct.x - blobSizeAct.width, colAct.y);
-	cv::Point orgLeft(colAct);
-	trackRight = createTrackAt(roi, orgRight, blobSizeAct, velocityRight, 1);
-	trackLeft = createTrackAt(roi, orgLeft, blobSizeAct, velocityLeft, 2);
-
-	return Occlusion(roi, &trackLeft, &trackRight, 5);
-}
-
-
-
-
 
 //////////////////////////////////////////////////////////////////////////////
 // Occlusion

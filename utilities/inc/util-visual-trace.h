@@ -1,5 +1,5 @@
 #pragma once
-
+#include "../../car-count/include/tracker.h"
 
 /// functions for visual tracing of blob assignment to track and scene tracker
 /// for testing purposes and troubleshooting
@@ -37,6 +37,17 @@ struct MovingBlob {
 /// key handling for highgui windows
 bool breakEscContinueEnter();
 
+/// create occlusion at position x
+/// \param[out] trackRight track moving right
+/// \param[out] trackRight track moving left
+Occlusion createOcclusionAt(Track& trackRight, Track& trackLeft, cv::Size roi,  int collisionX, cv::Size blobSize, cv::Point velocityRight, cv::Point velocityLeft);
+
+/// create track from constant velocity
+Track createTrack(cv::Size roi, cv::Rect end, cv::Point velocity, int steps, size_t id = 0);
+
+/// create track at blob position with given velocity
+Track createTrackAt(cv::Size roi, cv::Point blobPos, cv::Size blobSize, cv::Point velocity, size_t id = 0);
+
 /// keyboard interface to move through recorded blobs
 /// and visualize them in highgui windows with showBlobsAt
 bool examineBlobTimeSeries(const BlobTimeSeries& blobTmSer, cv::Size roi);
@@ -44,6 +55,22 @@ bool examineBlobTimeSeries(const BlobTimeSeries& blobTmSer, cv::Size roi);
 /// keyboard interface to move through recorded track states
 /// and visualize them in highgui windows with showTrackStateAt
 bool examineTrackState(const TrackStateVec trackState, cv::Size roi);
+
+/// move blobs through entire roi
+BlobTimeSeries moveBlobsThroughRoi(const cv::Size& roi, const MovingBlob& right, const MovingBlob& left);
+
+/// move occlusion through roi
+/// starting at collsion point + gap
+/// \return vector of list of blobs (cv::Rect)
+/// \param[in] roi size of observed frame area
+/// \param[in] right moving blob (size, velocity)
+/// \param[in] left moving blob (size, velocity)
+/// \param[in] collisionX collision point
+/// \param[in] gapStartX gap between blobs at start
+BlobTimeSeries moveOcclusionThroughRoi(cv::Size roi, MovingBlob right, MovingBlob left, unsigned int collisionX = 0, unsigned int gapStartX = 0);
+
+/// print single blob rect on existing canvas
+void printBlob(cv::Mat& canvas, cv::Rect blob, cv::Scalar color);
 
 /// print list of blobs on existing canvas
 void printBlobs(cv::Mat& canvas, const std::list<cv::Rect>& blobs);

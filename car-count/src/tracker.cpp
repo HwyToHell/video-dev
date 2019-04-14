@@ -26,6 +26,42 @@ double round(double number) { // not necessary in C++11
 // Occlusion
 //////////////////////////////////////////////////////////////////////////////
 
+// Local functions 
+// ---------------------------------------------------------------------------
+cv::Rect extendRectToLeftBorder(cv::Size roi, cv::Rect rect) {
+	cv::Rect rcExtended(rect);
+	rcExtended.x = 0;
+	rcExtended.width = rect.width + rect.x;
+	return rcExtended;
+}
+
+
+cv::Rect extendRectToRightBorder(cv::Size roi, cv::Rect rect) {
+	cv::Rect rcExtended(rect);
+	rcExtended.x = 0;
+	rcExtended.width = rect.width + rect.x;
+	return rcExtended;
+}
+
+
+bool movingRightAtLeftBorder(cv::Size roi, const Track* trackRight) {
+	int borderTolerance = roi.width * 3 / 100;
+	if (trackRight->getActualEntry().rect().x < borderTolerance)
+		return true;
+	else 
+		return false;
+}
+
+bool movingLeftAtRightBorder(cv::Size roi, const Track* trackLeft) {
+	int borderTolerance = roi.width * 3 / 100;
+	if (trackLeft->getActualEntry().rect().x + trackLeft->getActualEntry().rect().width
+		> roi.width - borderTolerance)
+		return true;
+	else 
+		return false;
+}
+// ---------------------------------------------------------------------------
+
 Occlusion::Occlusion(cv::Size roi, Track* movingLeft, Track* movingRight, int steps, size_t id) :
 	m_id(id),
 	m_hasPassed(false),
@@ -74,7 +110,8 @@ void Occlusion::assignBlobs(std::list<cv::Rect>& blobs) {
 			cv::Rect rcRight = calcSubstitute(*m_movingRight);
 			cv::Rect rcLeft = calcSubstitute(*m_movingLeft);
 
-			/* TODO results not reliable -> further tests needed
+			/* TODO adjust subst value for blobs at roi border
+			
 			// one blob -> adjust substitute position based on blob's edges
 			// by keeping the same substitute size (see occlusion.pptx, page 2)
 			if (blobsInOcclusion.size() == 1) { 
@@ -107,24 +144,40 @@ void Occlusion::assignBlobs(std::list<cv::Rect>& blobs) {
 	return;
 }
 
+
 size_t Occlusion::id() const { return m_id; }
+
 
 bool Occlusion::hasPassed() const { return m_hasPassed; }
 
+
 Track* Occlusion::movingLeft() const { return m_movingLeft; }
+
 
 Track* Occlusion::movingRight() const { return m_movingRight; }
 
+
 cv::Rect Occlusion::rect() const { return m_rect; }
+
 
 int Occlusion::remainingUpdateSteps() { return m_remainingUpdateSteps; }
 
+
 void Occlusion::setId(size_t id) { m_id = id; }
+
 
 cv::Rect Occlusion::updateRect() {
 // adjustment based on presumed next update step
 	cv::Rect nextRight = calcSubstitute(*m_movingRight);
 	cv::Rect nextLeft = calcSubstitute(*m_movingLeft);
+
+// if tracks enter roi from border -> extend occlusion rect to border
+	// track movingRight at left roi border
+	if (movingRightAtLeftBorder(m_roiSize, m_movingRight))
+		nextRight = extendRectToLeftBorder(m_roiSize, nextRight);
+	if (movingLeftAtRightBorder(m_roiSize, m_movingLeft))
+		nextLeft = extendRectToRightBorder(m_roiSize, nextLeft);
+
 	m_rect = nextRight | nextLeft;
 	return m_rect;
 }
@@ -999,6 +1052,10 @@ std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs, long lo
 	//5 check occlusion
 	const std::list<Occlusion>* pOcclusions;
 	pOcclusions = setOcclusion();
+
+	// DEBUG
+	traceTrackState.push_back(TrackState("after deletion", blobs, m_occlusions.getList(), m_tracks));
+	// END_DEBUG
 
 	// DEBUG
 	g_trackState.push_back(traceTrackState);	
