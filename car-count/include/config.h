@@ -5,8 +5,8 @@
 #include "../../cpp/inc/observer.h"
 #include "../../cpp/inc/program_options.h"
 #else
-#include "../../cpp/inc/observer.h"
-#include "../../cpp/inc/program_options.h"
+#include "/home/holger/app-dev/cpp/inc/observer.h"
+#include "/home/holger/app-dev/cpp/inc/program_options.h"
 #endif
 
 

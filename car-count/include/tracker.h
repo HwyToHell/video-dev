@@ -4,16 +4,17 @@
 #pragma warning(disable: 4482) // MSVC10: enum nonstd extension
 #include "../../cpp/inc/observer.h"
 #include "../../cpp/inc/id_pool.h"
-#include "../include/recorder.h"
+#include "recorder.h"
 #else
-#include "../../cpp/inc/observer.h"
-#include "../../cpp/inc/id_pool.h"
+#include "/home/holger/app-dev/cpp/inc/observer.h"
+#include "/home/holger/app-dev/cpp/inc/id_pool.h"
 #include "../include/recorder.h"
 #endif
 
 // forward decls
 class Config;
 class Track;
+
 
 /// occlusion = overlapping tracks
 class Occlusion {
@@ -44,11 +45,12 @@ private:
 /// collection of occlusions
 class OcclusionIdList {
 public:
-	typedef std::list<Occlusion>::const_iterator IterOcclusion;	
+	typedef std::list<Occlusion>::const_iterator	IterOcclusionConst;
+	typedef std::list<Occlusion>::iterator			IterOcclusion;
 								OcclusionIdList(size_t maxIdCount);
 	bool						add(Occlusion& occlusion);
 	void						assignBlobs(std::list<cv::Rect>& blobs);
-	const std::list<Occlusion>*	getList();
+	std::list<Occlusion>*		getList();
 	bool						isOcclusion();
 	IterOcclusion				remove(IterOcclusion iOcclusion);
 private:

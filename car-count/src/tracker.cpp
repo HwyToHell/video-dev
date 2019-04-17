@@ -134,7 +134,7 @@ void Occlusion::assignBlobs(std::list<cv::Rect>& blobs) {
 	// adjust occlusion rect after updates
 	this->updateRect();
 
-	// occlusion has been passed -> mark occlution for deletion in updateTracks
+	// occlusion has been passed -> mark occlusion as hasPassed (for deletion in OcclusionIdList::assignBlobs)
 	int mvRight_edgeLeft = m_movingRight->getActualEntry().rect().x;
 	int mvLeft_edgeRight = m_movingLeft->getActualEntry().rect().x
 		+ m_movingLeft->getActualEntry().rect().width;
@@ -210,8 +210,9 @@ void OcclusionIdList::assignBlobs(std::list<cv::Rect>& blobs) {
 		if (iOcc->hasPassed()) {
 			iOcc->movingLeft()->setOccluded(false);
 			iOcc->movingRight()->setOccluded(false);
-			m_occlusionIds.freeID(iOcc->id());
-			iOcc = m_occlusions.erase(iOcc);
+			iOcc = remove(iOcc);
+			//m_occlusionIds.freeID(iOcc->id());
+			//iOcc = m_occlusions.erase(iOcc);
 			
 		// inside occlusion -> update occluded tracks
 			//
@@ -226,7 +227,7 @@ void OcclusionIdList::assignBlobs(std::list<cv::Rect>& blobs) {
 		
 	// TODO_END move to OcclusionIdList::assignBlobs()
 
-const std::list<Occlusion>* OcclusionIdList::getList() {
+std::list<Occlusion>* OcclusionIdList::getList() {
 	return &m_occlusions;
 }
 
@@ -927,15 +928,15 @@ bool SceneTracker::returnTrackID(int id)
 
 
 const std::list<Occlusion>*  SceneTracker::setOcclusion() {
-	typedef std::list<Track>::iterator TiterTracks;
-	TiterTracks iTrack = m_tracks.begin();
+	typedef std::list<Track>::iterator IterTrackConst;
+	IterTrackConst iTrack = m_tracks.begin();
 
 	// for_each track
 	while (iTrack != m_tracks.end()) {
 		// check only for tracks, that are not occluded
 		if (!iTrack->isOccluded()) {
 			// assing compare track to next list element
-			TiterTracks iTrackComp = iTrack;
+			IterTrackConst iTrackComp = iTrack;
 			++iTrackComp;
 
 			// for_each remaining tracks in list
@@ -944,27 +945,27 @@ const std::list<Occlusion>*  SceneTracker::setOcclusion() {
 					if (isDirectionOpposite(*iTrack, *iTrackComp, 0.5)) {
 				
 						// determine left and right moving track
-						Track& movesRight = *iTrack;
-						Track& movesLeft = *iTrackComp;
+						IterTrackConst movesRight = iTrack;
+						IterTrackConst movesLeft = iTrackComp;
 						if (signBit(iTrack->getVelocity().x)) {
-							movesLeft = *iTrack;
-							movesRight = *iTrackComp;
+							movesLeft = iTrack;
+							movesRight = iTrackComp;
 						} else {
-							movesLeft = *iTrackComp;
-							movesRight = *iTrack;
+							movesLeft = iTrackComp;
+							movesRight = iTrack;
 						}
 
-						if (isNextUpdateOccluded(movesLeft, movesRight)) {
-							int remainingUpdateSteps = remainingOccludedUpdateSteps(movesLeft, movesRight);
+						if (isNextUpdateOccluded(*movesLeft, *movesRight)) {
+							int remainingUpdateSteps = remainingOccludedUpdateSteps(*movesLeft, *movesRight);
 							//Occlusion occ(&m_occlusionIDs, m_roiSize, &movesLeft, &movesRight, remainingUpdateSteps);
-							Occlusion occ(m_roiSize, &movesLeft, &movesRight, remainingUpdateSteps);
+							Occlusion occ(m_roiSize, &(*movesLeft), &(*movesRight), remainingUpdateSteps);
 
 				
 							// create occlusion list entry (if ID available)
 							if (m_occlusions.add(occ)) {
 								// mark tracks as occluded
-								movesLeft.setOccluded(true);
-								movesRight.setOccluded(true);
+								movesLeft->setOccluded(true);
+								movesRight->setOccluded(true);
 							}	
 						}
 					} // end_if isDirectionOpposite
