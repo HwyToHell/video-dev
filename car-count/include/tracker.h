@@ -21,8 +21,9 @@ class Occlusion {
 public:
 				Occlusion(cv::Size roi, Track* movingRight, Track* movingLeft, int steps, size_t id = 0);
 	void		assignBlobs(std::list<cv::Rect>& blobs);
-	size_t		id() const;
 	bool		hasPassed() const;
+	size_t		id() const;
+	bool		isMarkedForDelete() const;
 	Track*		movingLeft() const;
 	Track*		movingRight() const;
 	cv::Rect	rect() const;
@@ -31,8 +32,9 @@ public:
 	cv::Rect	updateRect();
 	
 private:
-	size_t		m_id;
 	bool		m_hasPassed;
+	size_t		m_id;
+	bool		m_isMarkedForDelete;
 	Track*		m_movingLeft;
 	Track*		m_movingRight;
 	cv::Rect	m_rect;
@@ -150,12 +152,6 @@ public:
 	void setOccluded(bool state);
 
 	/// update track depending on size and distance of motion detection
-	/// \param[in] blobs new unassigned motion detections
-	/// \param[in] maxConf maximum value for confidence of track
-	/// \param[in] maxDeviation maximum allowed deviation in % of width and height for new motion detection
-	/// \param[in] maxDist maximum distance in pixels of new motion detection
-	void updateTrack(std::list<cv::Rect>& blobs, cv::Size roi, int maxConf, 
-		double maxDeviation, double maxDist);
 	
 	/// update track based on blob intersection
 	/// solves tracking error #1
@@ -164,6 +160,9 @@ public:
 	///  and new detected blob (0 ... 1 = 100% of new detected blob)
 	/// \param[in] maxConf maximum value for confidence of track
 	void updateTrackIntersect(std::list<cv::Rect>& blobs, cv::Size roi, double minInter = 0.5, int maxConf = 2);
+
+	/// update track that has just passed occlusion area
+	bool updateTrackPassedOcclusion(std::list<cv::Rect>& blobs, cv::Size roi, int maxConf);
 
 private:
 	cv::Point2d				m_avgVelocity;
@@ -299,6 +298,9 @@ void adjustSubstPos(const cv::Rect& blob, cv::Rect& rcRight, cv::Rect& rcLeft);
 
 /// create substitute track entry by using track velocity
 cv::Rect calcSubstitute(const Track& track);
+
+/// clip rect if it exeeds roi
+cv::Rect clipAtRoi(cv::Rect rec, cv::Size roi);
 
 /// combine tracks that have
 ///	same direction and area intersection

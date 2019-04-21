@@ -713,6 +713,17 @@ TEST_CASE("#sce015 updateTracks", "[Scene]") {
 				REQUIRE( 1 == occlusions->size() );
 				REQUIRE( false == occlusions->front().hasPassed() );
 			}
+				// TRACE
+				if (g_traceScene) {
+					cv::Mat canvas(roi, CV_8UC3, black);
+					printTrack(canvas, *(occlusions->front().movingRight()), green);
+					printTrack(canvas, *(occlusions->front().movingLeft()), yellow);
+					printOcclusion(canvas, occlusions->front(), magenta);
+					printBlobs(canvas, blobs);
+					cv::imshow("sce#015 tracks", canvas);
+					breakEscContinueEnter();
+				}
+				// END_TRACE
 
 			SECTION("occlusion has passed -> normal assignment") {
 				blobRight += velocityRight;
@@ -734,7 +745,7 @@ TEST_CASE("#sce015 updateTracks", "[Scene]") {
 				REQUIRE( true == occlusions->front().hasPassed() );
 		
 
-				SECTION("next update -> delete occlusion") {
+				SECTION("occlusion is marked for deletion -> normal assignment") {
 					blobRight += velocityRight;
 					blobLeft += velocityLeft;
 
@@ -749,13 +760,32 @@ TEST_CASE("#sce015 updateTracks", "[Scene]") {
 					REQUIRE( blobRight == pTracks->front().getActualEntry().rect() );
 					REQUIRE( blobLeft == pTracks->back().getActualEntry().rect() );
 
-					// occlusion has been deleted
-					const list<Occlusion>* occlusions = scene.occlusionList(); 
-					REQUIRE( 0 == occlusions->size() );
+					// occlusion is marked for deletion
+					REQUIRE( true == occlusions->front().isMarkedForDelete() );
+
+					SECTION("next update -> delete occlusion") {
+						blobRight += velocityRight;
+						blobLeft += velocityLeft;
+
+						// blobs do not intersect
+						REQUIRE( 0 == (blobRight & blobLeft).area() );
+						blobs.push_back(blobRight);
+						blobs.push_back(blobLeft);	
+						list<Track>* pTracks = scene.updateTracks(blobs, 0);
+				
+						// all blobs have been assigned
+						REQUIRE( 0 == blobs.size() );
+						REQUIRE( blobRight == pTracks->front().getActualEntry().rect() );
+						REQUIRE( blobLeft == pTracks->back().getActualEntry().rect() );
+
+						// occlusion has been deleted
+						const list<Occlusion>* occlusions = scene.occlusionList(); 
+						REQUIRE( 0 == occlusions->size() );
+					}
 				}
-			}
-		}
-	}
+			} // SECTION("occlusion has passed -> normal assignment")
+		} // SECTION("assign blobs in occlusion") {
+	} // SECTION("assign blobs before occlusion") {
 } // TEST_CASE #sce015
 
 

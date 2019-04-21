@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
 	config.attach(pScene);
 
 	// create blobs for occlusion
-	cv::Size rightSize(60,20);
+	cv::Size rightSize(30,20);
 	cv::Point rightVelocity(5,0);
 	MovingBlob right(cv::Point(0,0), rightSize, rightVelocity);
 
@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
 	cv::Point leftVelocity(-6,0);
 	MovingBlob left(cv::Point(0,0), leftSize, leftVelocity);
 
-	BlobTimeSeries blobTmSer = moveOcclusionThroughRoi(roi, right, left, 20, 20);
+	BlobTimeSeries blobTmSer = moveOcclusionThroughRoi(roi, right, left, 90, 10);
 	// visualize blobs for debugging purposes
 	//examineBlobTimeSeries(blobTmSer, roi);
 	//return 0;

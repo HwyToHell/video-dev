@@ -28,7 +28,7 @@ double round(double number) { // not necessary in C++11
 
 // Local functions 
 // ---------------------------------------------------------------------------
-cv::Rect extendRectToLeftBorder(cv::Size roi, cv::Rect rect) {
+cv::Rect extendRectToLeftBorder(cv::Size roi, const cv::Rect& rect) {
 	cv::Rect rcExtended(rect);
 	rcExtended.x = 0;
 	rcExtended.width = rect.width + rect.x;
@@ -36,16 +36,33 @@ cv::Rect extendRectToLeftBorder(cv::Size roi, cv::Rect rect) {
 }
 
 
-cv::Rect extendRectToRightBorder(cv::Size roi, cv::Rect rect) {
+cv::Rect extendRectToRightBorder(cv::Size roi, const cv::Rect& rect) {
 	cv::Rect rcExtended(rect);
-	rcExtended.x = 0;
-	rcExtended.width = rect.width + rect.x;
+	rcExtended.width = roi.width - rect.x;
 	return rcExtended;
+}
+
+
+bool isRectAtRightRoiBorder(cv::Size roi, const cv::Rect& rect) {
+	const int borderTolerance = roi.width * 3 / 100;
+	if (rect.x + rect.width > roi.width - borderTolerance)
+		return true;
+	else
+		return false;
+}
+
+
+bool isRectAtLeftRoiBorder(cv::Size roi, const cv::Rect& rect) {
+	const int borderTolerance = roi.width * 3 / 100;
+	if (rect.x < borderTolerance)
+		return true;
+	else
+		return false;
 }
 
 
 bool movingRightAtLeftBorder(cv::Size roi, const Track* trackRight) {
-	int borderTolerance = roi.width * 3 / 100;
+	const int borderTolerance = roi.width * 3 / 100;
 	if (trackRight->getActualEntry().rect().x < borderTolerance)
 		return true;
 	else 
@@ -53,7 +70,7 @@ bool movingRightAtLeftBorder(cv::Size roi, const Track* trackRight) {
 }
 
 bool movingLeftAtRightBorder(cv::Size roi, const Track* trackLeft) {
-	int borderTolerance = roi.width * 3 / 100;
+	const int borderTolerance = roi.width * 3 / 100;
 	if (trackLeft->getActualEntry().rect().x + trackLeft->getActualEntry().rect().width
 		> roi.width - borderTolerance)
 		return true;
@@ -63,8 +80,9 @@ bool movingLeftAtRightBorder(cv::Size roi, const Track* trackLeft) {
 // ---------------------------------------------------------------------------
 
 Occlusion::Occlusion(cv::Size roi, Track* movingLeft, Track* movingRight, int steps, size_t id) :
-	m_id(id),
 	m_hasPassed(false),
+	m_id(id),
+	m_isMarkedForDelete(false),
 	m_movingLeft(movingLeft),	
 	m_movingRight(movingRight),
 	m_remainingUpdateSteps(steps),
@@ -77,7 +95,7 @@ Occlusion::Occlusion(cv::Size roi, Track* movingLeft, Track* movingRight, int st
 
 void Occlusion::assignBlobs(std::list<cv::Rect>& blobs) {
 
-	assert(m_hasPassed == false);
+	assert(m_isMarkedForDelete == false);
 	assert(m_movingRight != nullptr);
 	assert(m_movingLeft != nullptr);
 	
@@ -103,32 +121,58 @@ void Occlusion::assignBlobs(std::list<cv::Rect>& blobs) {
 			// -> for both tracks: calc substitute and decrease confidence
 			m_movingRight->updateTrackIntersect(blobsInOcclusion, m_roiSize, 0.4, 4); 
 			m_movingLeft->updateTrackIntersect(blobsInOcclusion, m_roiSize, 0.4, 4); 
+			if (m_hasPassed)
+				m_isMarkedForDelete = true;
 			break;
 
 		case 1: { // bracket necessary for declaring variables
-			// calc substitutes for both occluded tracks
-			cv::Rect rcRight = calcSubstitute(*m_movingRight);
-			cv::Rect rcLeft = calcSubstitute(*m_movingLeft);
+			// last assignment step 
+			if (m_hasPassed) {
+				
+				// allow for small tolerance at roi border in order to deal with noisy blob
+				int borderTolerance = m_roiSize.width * 3 / 100;
+				
+				// occlusion touches left border -> assign blob to right moving track
+				if (m_rect.x <= borderTolerance) {
+					m_movingRight->updateTrackPassedOcclusion(blobsInOcclusion, m_roiSize, 4);			
+				}
 
-			/* TODO adjust subst value for blobs at roi border
-			
-			// one blob -> adjust substitute position based on blob's edges
-			// by keeping the same substitute size (see occlusion.pptx, page 2)
-			if (blobsInOcclusion.size() == 1) { 
-				list<cv::Rect>::iterator iBlobs = blobsInOcclusion.begin();
-				adjustSubstPos(*iBlobs, rcRight, rcLeft);
-			} */
+				// occlusion touches right border -> assign blob to left moving track
+				if (m_rect.x + m_rect.width >= m_roiSize.width - borderTolerance) {
+					m_movingLeft->updateTrackPassedOcclusion(blobsInOcclusion, m_roiSize, 4);			
+				}
 
-			// add rcRight / Left (original or adjusted)
-			m_movingRight->addTrackEntry(rcRight, m_roiSize);
-			m_movingLeft->addTrackEntry(rcLeft, m_roiSize);
+				m_isMarkedForDelete = true;
+
+			// all other assignments
+			} else {
+				// calc substitutes for both occluded tracks
+				cv::Rect rcRight = calcSubstitute(*m_movingRight);
+				cv::Rect rcLeft = calcSubstitute(*m_movingLeft);
+
+				// extend substitute to roi border, if track still enters scene
+				//   and opposite track has not reached roi border yet
+				if ( isRectAtRightRoiBorder(m_roiSize, blobsInOcclusion.front()) 
+					&& !isRectAtRightRoiBorder(m_roiSize, rcRight) )
+					rcLeft = extendRectToRightBorder(m_roiSize, rcLeft);
+				if ( isRectAtLeftRoiBorder(m_roiSize, blobsInOcclusion.front())
+					&& !isRectAtLeftRoiBorder(m_roiSize, rcLeft) )
+					rcRight = extendRectToLeftBorder(m_roiSize, rcRight);
+
+				// add rcRight / Left (original or adjusted)
+				m_movingRight->addTrackEntry(rcRight, m_roiSize);
+				m_movingLeft->addTrackEntry(rcLeft, m_roiSize);
+			}
 			break;	
+
 		}
 		
 		default:
 		// two or more blobs -> regular track update
 		m_movingRight->updateTrackIntersect(blobsInOcclusion, m_roiSize, 0.4, 4); 
-		m_movingLeft->updateTrackIntersect(blobsInOcclusion, m_roiSize, 0.4, 4); 
+		m_movingLeft->updateTrackIntersect(blobsInOcclusion, m_roiSize, 0.4, 4);
+		if (m_hasPassed)
+			m_isMarkedForDelete = true;
 	}
 
 	// adjust occlusion rect after updates
@@ -145,10 +189,13 @@ void Occlusion::assignBlobs(std::list<cv::Rect>& blobs) {
 }
 
 
+bool Occlusion::hasPassed() const { return m_hasPassed; }
+
+
 size_t Occlusion::id() const { return m_id; }
 
 
-bool Occlusion::hasPassed() const { return m_hasPassed; }
+bool Occlusion::isMarkedForDelete() const { return m_isMarkedForDelete; }
 
 
 Track* Occlusion::movingLeft() const { return m_movingLeft; }
@@ -168,10 +215,10 @@ void Occlusion::setId(size_t id) { m_id = id; }
 
 cv::Rect Occlusion::updateRect() {
 // adjustment based on presumed next update step
-	cv::Rect nextRight = calcSubstitute(*m_movingRight);
-	cv::Rect nextLeft = calcSubstitute(*m_movingLeft);
+	cv::Rect nextRight = clipAtRoi(calcSubstitute(*m_movingRight), m_roiSize);
+	cv::Rect nextLeft = clipAtRoi(calcSubstitute(*m_movingLeft), m_roiSize);
 
-// if tracks enter roi from border -> extend occlusion rect to border
+// if track enters roi from border -> extend occlusion rect to border
 	// track movingRight at left roi border
 	if (movingRightAtLeftBorder(m_roiSize, m_movingRight))
 		nextRight = extendRectToLeftBorder(m_roiSize, nextRight);
@@ -207,7 +254,7 @@ void OcclusionIdList::assignBlobs(std::list<cv::Rect>& blobs) {
 
 		// occlusion has been passed or at least one track has been deleted
 		// -> delete occlusion, return ID, unset track occlusion status
-		if (iOcc->hasPassed()) {
+		if (iOcc->isMarkedForDelete()) {
 			iOcc->movingLeft()->setOccluded(false);
 			iOcc->movingRight()->setOccluded(false);
 			iOcc = remove(iOcc);
@@ -299,72 +346,9 @@ int TrackEntry::width() const {
 // Track /////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-Track::Track(int id) : m_avgVelocity(0,0), m_confidence(0),
-	m_counted(false), m_id(id), m_isMarkedForDelete(false), m_isOccluded(false),
-	m_leavingRoiTo(Direction::none), m_prevAvgVelocity(0,0)  {
-}
-
-/// local function: velocity difference between new blob and last track entry 
-cv::Point diffVelocity(cv::Rect& blob, Track* const track, const cv::Size roi);
-
-bool outsideRoi(const cv::Rect& rect, const cv::Size roi) {
-	if ( rect.x + rect.width <= 0 || rect.x > roi.width )
-		return true;
-	if ( rect.y + rect.height <= 0 || rect.y > roi.height )
-		return true;
-	return false;
-}
-
-
-/// add TrackEntry to history and update velocity
-bool Track::addTrackEntry(cv::Rect& blob, const cv::Size roi) {
-	
-	// don't add track entry, if blob is outside roi entirely
-	if (outsideRoi(blob, roi)) {
-		std::cerr << "addTrackEntry: blob outside roi" << std::endl;
-		return false;
-	}
-
-	// clip x, if blob exceeds roi
-	int leftEdge = blob.x;
-	int rightEdge = leftEdge + blob.width;
-	if (leftEdge < 0) {
-		blob.width = blob.width + blob.x;
-		blob.x = 0;
-	}
-	int xClipRight = rightEdge - roi.width;
-	if (xClipRight > 0) {
-		blob.width = blob.width - xClipRight;
-	}
-
-	cv::Point velocity = diffVelocity(blob, this, roi);
-	m_history.push_back(TrackEntry(blob, velocity));
-
-	m_prevAvgVelocity = m_avgVelocity;
-	updateAverageVelocity(roi);
-
-	setLeavingRoiFlag(roi);
-
-	return true;
-}
-
-/// create substitute TrackEntry, if no close blob available
-bool Track::addSubstitute(cv::Size roi) {
-	// TODO adjust for leaving and entering roi
-	// take average velocity and compose bbox from previous element
-	cv::Point2i velocity((int)round(m_avgVelocity.x), (int)round(m_avgVelocity.y));
-	cv::Rect substitute = getActualEntry().rect() + velocity;
-
-	// TODO: use Track::avgHeight, avgWidth
-
-	// roi check and clipping done in addTrackEntry
-	if (addTrackEntry(substitute, roi))
-		return true;
-	else
-		return false;
-}
-
-
+// Local functions 
+// ---------------------------------------------------------------------------
+/// velocity difference between new blob and last track entry 
 cv::Point diffVelocity(cv::Rect& blob, Track* const track, const cv::Size roi) {
 	// inside border tolerance limits blob edges are considered at or outside roi
 	// in order to deal with blob noise at the roi border
@@ -421,6 +405,96 @@ cv::Point diffVelocity(cv::Rect& blob, Track* const track, const cv::Size roi) {
 	} // end_if two elements available
 	return velocity;
 }
+
+/// true if blob update does not reverse track direction 
+bool isBlobNotReversingTrack(const Track& track, const cv::Rect& blob, cv::Point2d velocity) {
+	int blobCentroidX = blob.x + (blob.width / 2);
+	int trackCentroidX = track.getActualEntry().centroid().x;
+	int velocityX = static_cast<int>(ceil(track.getVelocity().x));
+	
+	// track new (velocity zero)
+	if (velocityX == 0)
+		return true;
+
+	// track moves to right
+	if (velocityX > 0) {
+		if (trackCentroidX - blobCentroidX <= velocityX)
+			return true;
+		else
+			return false;
+	// track moves to left
+	} else {
+		if (trackCentroidX - blobCentroidX >= velocityX)
+			return true;
+		else
+			return false;
+	}
+}
+
+/// true if entire rect is located outside of roi
+bool outsideRoi(const cv::Rect& rect, const cv::Size roi) {
+	if ( rect.x + rect.width <= 0 || rect.x > roi.width )
+		return true;
+	if ( rect.y + rect.height <= 0 || rect.y > roi.height )
+		return true;
+	return false;
+}
+// ---------------------------------------------------------------------------
+
+Track::Track(int id) : m_avgVelocity(0,0), m_confidence(0),
+	m_counted(false), m_id(id), m_isMarkedForDelete(false), m_isOccluded(false),
+	m_leavingRoiTo(Direction::none), m_prevAvgVelocity(0,0)  {
+}
+
+
+/// add TrackEntry to history and update velocity
+bool Track::addTrackEntry(cv::Rect& blob, const cv::Size roi) {
+	
+	// don't add track entry, if blob is outside roi entirely
+	if (outsideRoi(blob, roi)) {
+		std::cerr << "addTrackEntry: blob outside roi" << std::endl;
+		return false;
+	}
+
+	// clip x, if blob exceeds roi
+	int leftEdge = blob.x;
+	int rightEdge = leftEdge + blob.width;
+	if (leftEdge < 0) {
+		blob.width = blob.width + blob.x;
+		blob.x = 0;
+	}
+	int xClipRight = rightEdge - roi.width;
+	if (xClipRight > 0) {
+		blob.width = blob.width - xClipRight;
+	}
+
+	cv::Point velocity = diffVelocity(blob, this, roi);
+	m_history.push_back(TrackEntry(blob, velocity));
+
+	m_prevAvgVelocity = m_avgVelocity;
+	updateAverageVelocity(roi);
+
+	setLeavingRoiFlag(roi);
+
+	return true;
+}
+
+/// create substitute TrackEntry, if no close blob available
+bool Track::addSubstitute(cv::Size roi) {
+	// TODO adjust for leaving and entering roi
+	// take average velocity and compose bbox from previous element
+	cv::Point2i velocity((int)round(m_avgVelocity.x), (int)round(m_avgVelocity.y));
+	cv::Rect substitute = getActualEntry().rect() + velocity;
+
+	// TODO: use Track::avgHeight, avgWidth
+
+	// roi check and clipping done in addTrackEntry
+	if (addTrackEntry(substitute, roi))
+		return true;
+	else
+		return false;
+}
+
 
 const TrackEntry& Track::getActualEntry() const { return m_history.back(); }
 
@@ -550,55 +624,6 @@ cv::Point2d& Track::updateAverageVelocity(cv::Size roi) {
 }
 
 
-/// iterate through detected blobs, check if size is similar and distance close
-/// save closest blob to history and delete from blob input list 
-void Track::updateTrack(std::list<cv::Rect>& blobs, cv::Size roi, int maxConf, 
-	double maxDeviation, double maxDist) {
-	
-	typedef std::list<cv::Rect>::iterator TiterBlobs;
-	// minDist determines closest track
-	//	initialized with maxDist in order to consider only close tracks
-	double minDist = maxDist; 
-	TiterBlobs iBlobs = blobs.begin();
-	TiterBlobs iBlobsMinDist = blobs.end(); // points to blob with closest distance to track
-	
-	while (iBlobs != blobs.end()) {
-		TrackEntry te(*iBlobs, cv::Point2d(0,0));
-		bool b = getActualEntry().isSizeSimilar(te, maxDeviation);
-		if ( getActualEntry().isSizeSimilar(te, maxDeviation) ) {
-			double distance = euclideanDist(te.centroid(), getActualEntry().centroid());
-			if (distance < minDist) {
-				minDist = distance;
-				iBlobsMinDist = iBlobs;
-			}
-		}
-		++iBlobs;
-	}// end iterate through all input blobs
-
-	// assign closest shape to track and delete from list of blobs
-	if (iBlobsMinDist != blobs.end()) // shape to assign available
-	{
-		addTrackEntry(*iBlobsMinDist, roi);
-		iBlobs = blobs.erase(iBlobsMinDist);
-		m_confidence <  maxConf ? ++m_confidence : m_confidence =  maxConf;
-	}
-	else // no shape to assign availabe, calculate substitute
-	{
-		--m_confidence;
-		if (m_confidence <= 0) 
-		{
-			m_isMarkedForDelete = true;
-		}
-		else
-			// if blob outside roi -> mark track for deletion
-			if (!addSubstitute(roi))
-				m_isMarkedForDelete = true;
-	}
-
-	return;
-}
-
-
 /// iterate through detected blobs, check if intersection
 /// assign all intersecting blobs to track
 /// store embracing rect of all assigned blobs to track
@@ -619,35 +644,43 @@ void Track::updateTrackIntersect(std::list<cv::Rect>& blobs, cv::Size roi, doubl
 			// track moves to right OR leaves roi to right --> assign rightmost blob
 			if ( (isTrackMovingToRight) || (m_leavingRoiTo == Direction::right) ) {
 
-				// no blobToAssign yet -> take first matching one
-				if (!isTrackUpdateAvailable) {
-					iBlobToAssign = iBlobs;
-					isTrackUpdateAvailable = true;
+				// avoid track reversion
+				// TODO delete if (isBlobNotReversingTrack(*this, *iBlobs, this->getVelocity())) {
 
-				// there is one blobToAssign already, check if there is a better one (rightmost)
-				} else {
-					int blobCentroidX = iBlobs->x + (iBlobs->width / 2);
-					int blobToAssignCentroidX = iBlobToAssign->x + (iBlobToAssign->width / 2);
-					if (blobCentroidX > blobToAssignCentroidX)
+					// no blobToAssign yet -> take first matching one
+					if (!isTrackUpdateAvailable) {
 						iBlobToAssign = iBlobs;
-				}
+						isTrackUpdateAvailable = true;
+
+					// there is one blobToAssign already, check if there is a better one (rightmost)
+					} else {
+						int blobCentroidX = iBlobs->x + (iBlobs->width / 2);
+						int blobToAssignCentroidX = iBlobToAssign->x + (iBlobToAssign->width / 2);
+						if (blobCentroidX > blobToAssignCentroidX)
+							iBlobToAssign = iBlobs;
+					}
+				// TODO delete}
 			}
 
 			// track moves to left OR leaves roi to left --> assign leftmost blob
 			if ( (!isTrackMovingToRight) || (m_leavingRoiTo == Direction::left) ) { 
 
-				// no blobToAssign yet -> take first matching one
-				if (!isTrackUpdateAvailable) {
-					iBlobToAssign = iBlobs;
-					isTrackUpdateAvailable = true;
+				// avoid track reversion
+				// TODO delete if (isBlobNotReversingTrack(*this, *iBlobs, this->getVelocity())) {
 
-				// there is one blobToAssign already, check if there is a better one (leftmost)
-				} else {
-					int blobCentroidX = iBlobs->x + (iBlobs->width / 2);
-					int blobToAssignCentroidX = iBlobToAssign->x + (iBlobToAssign->width / 2);
-					if (blobCentroidX < blobToAssignCentroidX)
+					// no blobToAssign yet -> take first matching one
+					if (!isTrackUpdateAvailable) {
 						iBlobToAssign = iBlobs;
-				}
+						isTrackUpdateAvailable = true;
+
+					// there is one blobToAssign already, check if there is a better one (leftmost)
+					} else {
+						int blobCentroidX = iBlobs->x + (iBlobs->width / 2);
+						int blobToAssignCentroidX = iBlobToAssign->x + (iBlobToAssign->width / 2);
+						if (blobCentroidX < blobToAssignCentroidX)
+							iBlobToAssign = iBlobs;
+					}
+				// TODO delete}
 			}
 
 		} // end_if area intersection between lastTrackEntry and newBlob
@@ -676,6 +709,39 @@ void Track::updateTrackIntersect(std::list<cv::Rect>& blobs, cv::Size roi, doubl
 			// if blob outside roi -> mark track for deletion
 			if (!addSubstitute(roi))
 				m_isMarkedForDelete = true;
+	}
+}
+
+
+/// update track that has just passed occlusion area
+/// compare intersection with track instead of blob 
+bool Track::updateTrackPassedOcclusion(std::list<cv::Rect>& blobs, cv::Size roi, int maxConf) {
+	// assignment based on area intersection between lastTrackEntry and newBlob
+	// larger than defined minimum intersection (in percentage of lastTrackEntry area)
+	std::list<cv::Rect>::iterator iBlobs = blobs.begin();
+	cv::Rect rcIntersect = *iBlobs & this->getActualEntry().rect();
+	const double minInter = 0.5;
+	int minTrackIntersectArea = static_cast<int>(minInter * this->getActualEntry().rect().area());
+		
+	// blob fits -> assign blob, increase track confidence
+	if ( rcIntersect.area() > minTrackIntersectArea ) {
+		this->addTrackEntry(*iBlobs, roi);
+		iBlobs = blobs.erase(iBlobs);
+		m_confidence <  maxConf ? ++m_confidence : m_confidence =  maxConf;
+		return true;
+
+	// no fitting blob available --> add substitute blob and decrease confidence
+	} else {
+		--m_confidence;
+		if (m_confidence <= 0) 
+		{
+			m_isMarkedForDelete = true;
+		} else {
+			// if blob outside roi -> mark track for deletion
+			if (!addSubstitute(roi))
+				m_isMarkedForDelete = true;
+		}
+		return false;
 	}
 }
 
@@ -1100,6 +1166,12 @@ cv::Rect calcSubstitute(const Track& track) {
 	cv::Point velocity((int)round(track.getVelocity().x), (int)round(track.getVelocity().y));
 	cv::Rect substitute = track.getActualEntry().rect() + velocity;
 	return substitute;
+}
+
+
+cv::Rect clipAtRoi(cv::Rect rec, cv::Size roi) {
+	cv::Rect rcRoi(cv::Point(0,0), roi);
+	return rec & rcRoi;
 }
 
 
