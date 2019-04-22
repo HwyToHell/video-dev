@@ -110,6 +110,7 @@ void classify(cv::Mat& srcImage) {
 std::vector<cv::Rect> extractMotionRects(cv::Mat& foregroundMask, int kernelSize, int minBlobArea, cv::Mat* debugImage);
 
 /// shows actual and previous track entry in track image
+// defined in util-read.png.cpp
 void printTrackUpdate(cv::Mat trackImage, std::list<Track>* pDebugTracks);
 
 
@@ -183,7 +184,7 @@ int track_main(int argc, char* argv[]) {
 		cv::imshow("debug", debugImg);
 
 		// vector -> list (required input for SceneTracker.updateTracks);
-		std::list<TrackEntry> motionRectList;
+		std::list<cv::Rect> motionRectList;
 		for (unsigned int i = 0; i < motionRects.size(); ++i) {
 			motionRectList.push_back(motionRects[i]);
 		}
@@ -302,8 +303,8 @@ std::vector<TrackEntry>SceneTracker::triggerDNNClassif() {
 	
 	vector<TrackEntry> countedObjects;
 
-	std::list<Track>::iterator iTrack = mTracks.begin();
-	while (iTrack != mTracks.end()) {
+	std::list<Track>::iterator iTrack = m_tracks.begin();
+	while (iTrack != m_tracks.end()) {
 		int confidence = iTrack->getConfidence();
 		int trackLength = iTrack->getLength();
 
@@ -441,36 +442,6 @@ void Segmentation::showHulls(cv::Mat& frame) {
 }
 
 
-void printTrackUpdate(cv::Mat trackImage, std::list<Track>* pDebugTracks) {
-	cv::Scalar color[4] = {blue, green, red, yellow};
-	int idx = 0;
-
-	std::list<Track>::iterator iTrack = pDebugTracks->begin();
-	while (iTrack != pDebugTracks->end()) {
-		int confidence = iTrack->getConfidence();
-		int id = iTrack->getId();
-		int length = iTrack->getLength();
-		//cv::Point2d vel2d = iTrack->getVelocity();
-		double velocity = iTrack->getVelocity().x;
-
-		cv::Rect rcActual = iTrack->getActualEntry().rect();
-		cv::rectangle(trackImage, rcActual, color[id % 4], 2);
-		
-		cv::Rect rcPrev = iTrack->getPreviousEntry().rect();
-		cv::rectangle(trackImage, rcPrev, color[id % 4]);
-
-		std::stringstream ss;
-		int xOffset = 5;
-		int yOffset = 10 + idx * 10;
-		ss << "#" << id << ", con=" << confidence << ", len=" << length << ", vel=" 
-			<< std::fixed << std::setprecision(1) << velocity;
-		cv::putText(trackImage, ss.str(), cv::Point(xOffset, yOffset),
-			cv::HersheyFonts::FONT_HERSHEY_SIMPLEX, 0.4, color[id % 4]);
-
-		++idx;
-		++iTrack;
-	}
-}
 
 
 

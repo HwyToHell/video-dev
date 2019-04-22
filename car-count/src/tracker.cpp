@@ -873,6 +873,8 @@ const std::list<Occlusion>* SceneTracker::deleteOcclusionsWithMarkedTracks() {
 	OcclusionIdList::IterOcclusion iOcc = m_occlusions.getList()->begin();
 	while (iOcc != m_occlusions.getList()->end()) {
 		if ( iOcc->movingLeft()->isMarkedForDelete() || iOcc->movingRight()->isMarkedForDelete() ) {
+			iOcc->movingLeft()->setOccluded(false);
+			iOcc->movingRight()->setOccluded(false);
 			iOcc = m_occlusions.remove(iOcc);
 		} else {
 			++iOcc;
@@ -1077,6 +1079,11 @@ void SceneTracker::update() {
 }
 
 
+void printIsOccluded(Track& track) {
+	std::cout << "id#" << track.getId() << " is occluded: " << track.isOccluded() << endl;
+	return;
+}
+
 std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs, long long frameCnt) {
 	// DEBUG
 	using namespace std;
@@ -1119,7 +1126,15 @@ std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs, long lo
 	//5 check occlusion
 	const std::list<Occlusion>* pOcclusions;
 	pOcclusions = setOcclusion();
-
+	// DEBUG
+	/*
+	cout << "idx#" << frameCnt << endl;
+	if (pOcclusions->size() >=1) {
+		cout << "right occluded: " << pOcclusions->front().movingRight()->isOccluded() << endl;
+		cout << "left occluded: " << pOcclusions->front().movingLeft()->isOccluded() << endl;
+	}
+	for_each(m_tracks.begin(), m_tracks.end(), printIsOccluded);
+	*/
 	// DEBUG
 	traceTrackState.push_back(TrackState("after deletion", blobs, m_occlusions.getList(), m_tracks));
 	// END_DEBUG

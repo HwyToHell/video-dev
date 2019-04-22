@@ -19,7 +19,7 @@ void printRandomValues();
 
 
 
-int main(int argc, char* argv[]) {
+int track_test_main(int argc, char* argv[]) {
 	using namespace std;
 	// visual debugging of assignment process in occlusion
 	// set up scene

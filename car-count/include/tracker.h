@@ -19,7 +19,7 @@ class Track;
 /// occlusion = overlapping tracks
 class Occlusion {
 public:
-				Occlusion(cv::Size roi, Track* movingRight, Track* movingLeft, int steps, size_t id = 0);
+				Occlusion(cv::Size roi, Track* movingRight, Track* movingLeft, int steps, size_t id = 0);		
 	void		assignBlobs(std::list<cv::Rect>& blobs);
 	bool		hasPassed() const;
 	size_t		id() const;
