@@ -812,11 +812,11 @@ void SceneTracker::attachCountRecorder(CountRecorder* pRecorder) {
 ///  - average width and height
 class CntAndClassify {
 	int mFrameCnt;
-	int mDbgCnt;
+	int m_debugCount;
 	ClassifyVehicle m_classify;
-	CountResults mCr;
+	CountResults m_vehicleCount;
 public:
-	CntAndClassify(int frameCnt, ClassifyVehicle classify) : mFrameCnt(frameCnt), m_classify(classify) {mDbgCnt = 0;}
+	CntAndClassify(int frameCnt, ClassifyVehicle classify) : mFrameCnt(frameCnt), m_classify(classify) {m_debugCount = 0;}
 
 	void operator()(Track& track) {
 		double trackLength = track.getLength();
@@ -831,9 +831,9 @@ public:
 					if (trackLength > m_classify.trackLength) { // "count_track_length"
 						track.setCounted(true);
 						if ( (width >= m_classify.truckSize.width) && (height >= m_classify.truckSize.height) )
-							++mCr.truckLeft;
+							++m_vehicleCount.truckLeft;
 						else // car
-							++mCr.carLeft;
+							++m_vehicleCount.carLeft;
 					}
 				}
 			}
@@ -842,9 +842,9 @@ public:
 					if (trackLength > m_classify.trackLength) {
 						track.setCounted(true);
 						if ( (width >= m_classify.truckSize.width) && (height >= m_classify.truckSize.height) )
-							++mCr.truckRight;
+							++m_vehicleCount.truckRight;
 						else // car
-							++mCr.carRight;
+							++m_vehicleCount.carRight;
 					}
 				}
 			}
@@ -852,9 +852,58 @@ public:
 	} // end operator()
 
 	CountResults results() { 
-		return mCr; 
+		return m_vehicleCount; 
 	}
 };
+
+
+class Classify {
+	int m_frameCount;
+	int m_debugCount;
+	ClassifyVehicle m_classify;
+	CountResults m_vehicleCount;
+public:
+	Classify(int frameCnt, ClassifyVehicle classify) : m_frameCount(frameCnt), m_classify(classify) {m_debugCount = 0;}
+
+	void operator()(Track& track) {
+		double trackLength = track.getLength();
+
+		// track not counted yet and required track length reached
+		if (!track.isCounted() && trackLength > m_classify.trackLength) {
+			cv::Point2d velocity(track.getVelocity());
+			int width = track.getActualEntry().width();
+			int height = track.getActualEntry().height();
+
+			track.setCounted(true);
+			
+			// moving to left
+			if (signBit(velocity.x)) { 
+				// truck
+				if ( (width >= m_classify.truckSize.width) && (height >= m_classify.truckSize.height) )
+					++m_vehicleCount.truckLeft;
+				// car
+				else 
+					++m_vehicleCount.carLeft;
+			}
+
+			// moving to right
+			else {
+				// truck
+				if ( (width >= m_classify.truckSize.width) && (height >= m_classify.truckSize.height) )
+					++m_vehicleCount.truckRight;
+				// car
+				else 
+					++m_vehicleCount.carRight;
+			}
+
+		} // end_if track not counted yet
+	} // end operator()
+
+	CountResults results() { 
+		return m_vehicleCount; 
+	}
+};
+
 
 
 CountResults SceneTracker::countVehicles(int frameCnt) {

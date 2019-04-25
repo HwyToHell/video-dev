@@ -399,12 +399,12 @@ int main(int argc, char* argv[]) {
 	using namespace std;
 	//string path320("D:/Users/Holger/counter/traffic320x240/");
 	//string path640("D:/Users/Holger/counter/traffic640x480_low_pass/");
-	//string busStop("D:/Users/Holger/counter/2017-09-18/bus_stop/");
+	string busStop("D:/Users/Holger/counter/2017-09-18/bus_stop/");
 	string opposite("D:/Users/Holger/counter/2017-09-18/opposite/"); 
-	int start = 2;
-	int stop = 40;
+	int start = 630;
+	int stop = 850;
 
-	string workPath = findWorkPath(start, stop, opposite);
+	string workPath = findWorkPath(start, stop, busStop);
 	if (workPath == "") {
 		waitForEnter();
 		return -1;
