@@ -15,7 +15,7 @@ extern size_t g_idx;
 
 double euclideanDist(const cv::Point& pt1, const cv::Point& pt2) {
 	cv::Point diff = pt1 - pt2;
-	return sqrt((double)(diff.x * diff.x + diff.y * diff.y));
+    return sqrt(static_cast<double>( (diff.x * diff.x + diff.y * diff.y) ));
 }
 
 double round(double number) { // not necessary in C++11
@@ -30,6 +30,7 @@ double round(double number) { // not necessary in C++11
 // ---------------------------------------------------------------------------
 cv::Rect extendRectToLeftBorder(cv::Size roi, const cv::Rect& rect) {
 	cv::Rect rcExtended(rect);
+    (void)roi;
 	rcExtended.x = 0;
 	rcExtended.width = rect.width + rect.x;
 	return rcExtended;
@@ -408,6 +409,7 @@ cv::Point diffVelocity(cv::Rect& blob, Track* const track, const cv::Size roi) {
 
 /// true if blob update does not reverse track direction 
 bool isBlobNotReversingTrack(const Track& track, const cv::Rect& blob, cv::Point2d velocity) {
+    (void)velocity;
 	int blobCentroidX = blob.x + (blob.width / 2);
 	int trackCentroidX = track.getActualEntry().centroid().x;
 	int velocityX = static_cast<int>(ceil(track.getVelocity().x));
@@ -448,25 +450,16 @@ Track::Track(int id) : m_avgVelocity(0,0), m_confidence(0),
 
 
 /// add TrackEntry to history and update velocity
-bool Track::addTrackEntry(cv::Rect& blob, const cv::Size roi) {
+bool Track::addTrackEntry(const cv::Rect& blobIn, const cv::Size roi) {
 	
 	// don't add track entry, if blob is outside roi entirely
-	if (outsideRoi(blob, roi)) {
+    if (outsideRoi(blobIn, roi)) {
 		std::cerr << "addTrackEntry: blob outside roi" << std::endl;
 		return false;
 	}
 
 	// clip x, if blob exceeds roi
-	int leftEdge = blob.x;
-	int rightEdge = leftEdge + blob.width;
-	if (leftEdge < 0) {
-		blob.width = blob.width + blob.x;
-		blob.x = 0;
-	}
-	int xClipRight = rightEdge - roi.width;
-	if (xClipRight > 0) {
-		blob.width = blob.width - xClipRight;
-	}
+    cv::Rect blob = clipAtRoi(blobIn, roi);
 
 	cv::Point velocity = diffVelocity(blob, this, roi);
 	m_history.push_back(TrackEntry(blob, velocity));
@@ -604,6 +597,7 @@ void Track::setOccluded(bool state) { m_isOccluded = state; }
 cv::Point2d& Track::updateAverageVelocity(cv::Size roi) {
 	const int window = 3;
 	int lengthHistory = m_history.size();
+    (void)roi;
 
 	// need at least two track entries in order to calculate velocity
 	if (lengthHistory > 1) {
@@ -968,7 +962,7 @@ std::list<Track>* SceneTracker::deleteReversingTracks() {
 			// if trackID available: create new track from lastTrackEntry, delete reversing track
 			if (id > 0) {
 				m_tracks.push_back(Track(id));
-				m_tracks.back().addTrackEntry(iTrack->getActualEntry().rect(), m_roiSize);
+                m_tracks.back().addTrackEntry(iTrack->getActualEntry().rect(), m_roiSize);
 				returnTrackID(iTrack->getId());
 				iTrack = m_tracks.erase(iTrack);
 			
@@ -1134,6 +1128,7 @@ void printIsOccluded(Track& track) {
 }
 
 std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs, long long frameCnt) {
+    (void)frameCnt;
 	// DEBUG
 	using namespace std;
 	std::list<TrackState> traceTrackState;
@@ -1175,6 +1170,7 @@ std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs, long lo
 	//5 check occlusion
 	const std::list<Occlusion>* pOcclusions;
 	pOcclusions = setOcclusion();
+    (void)pOcclusions;
 	// DEBUG
 	/*
 	cout << "idx#" << frameCnt << endl;

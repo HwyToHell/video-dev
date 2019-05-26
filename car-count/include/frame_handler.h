@@ -1,8 +1,10 @@
 #pragma once
 #include <memory> // shared_ptr
 #if defined (_WIN32)
+#if (_MSC_VER == 1600)
 #pragma warning(disable: 4996) // MSVC: crt secure warnings
 #pragma warning(disable: 4482) // MSVC10: enum nonstd extension
+#endif
 #include "cam_cap_dshow.h"
 #endif
 #include "config.h"

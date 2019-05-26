@@ -26,8 +26,8 @@ int main(int argc, const char* argv[]) {
     const char* av[] = {
         argv[0],
         "-i",
-        "traffic640x480.avi" };
-        //"traffic320x240.avi" };
+        //"traffic640x480.avi" };
+        "traffic320x240.avi" };
 
 	int ac = sizeof(av) / sizeof(av[0]);
 
@@ -93,7 +93,7 @@ int main(int argc, const char* argv[]) {
 	Inset inset = frameHandler.createInset(insetImgPath);
 	inset.putCount(cr);
 
-	list<TrackEntry> bboxList; // debug only, delete after
+	list<cv::Rect> bboxList; // debug only, delete after
     list<Track>* pTracks;
 
 

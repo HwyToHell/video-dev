@@ -72,6 +72,7 @@ Occlusion createOcclusionAt(Track& trackRight, Track& trackLeft, cv::Size roi,  
 
 
 Track createTrack(cv::Size roi, cv::Rect end, cv::Point velocity, int steps, size_t id) {
+    (void)id;
 	Track track;
 	cv::Rect rc(end.tl() - velocity * (steps - 1), end.size());
 	for (int i = 0; i < steps; ++i) {
@@ -482,7 +483,7 @@ void printTrackInfoAt(cv::Mat& canvas, const TrackTimeSeries& timeSeries, size_t
 
 		// collect track info
 		int confidence = iTrack->getConfidence();
-		int id = iTrack->getId();
+        size_t id = static_cast<size_t>(iTrack->getId());
 		int length = static_cast<int>(iTrack->getLength());
 		double velocity = iTrack->getVelocity().x;
 

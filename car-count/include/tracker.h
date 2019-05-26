@@ -1,7 +1,10 @@
 #pragma once
 
+
 #if defined (_WIN32)
+#if (_MSC_VER == 1600)
 #pragma warning(disable: 4482) // MSVC10: enum nonstd extension
+#endif
 #include "../../cpp/inc/observer.h"
 #include "../../cpp/inc/id_pool.h"
 #include "recorder.h"
@@ -16,6 +19,9 @@ class Config;
 class Track;
 
 
+//////////////////////////////////////////////////////////////////////////////
+// Occlusion /////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 /// occlusion = overlapping tracks
 class Occlusion {
 public:
@@ -43,7 +49,9 @@ private:
 };
 
 
-
+//////////////////////////////////////////////////////////////////////////////
+// Occlusion Id List /////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 /// collection of occlusions
 class OcclusionIdList {
 public:
@@ -61,7 +69,10 @@ private:
 };
 
 
-/// representation for a blob (detected geometric moving object) in the track vector 
+//////////////////////////////////////////////////////////////////////////////
+// Track Entry ///////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+/// representation for a blob (detected geometric moving object) in the track vector
 class TrackEntry {
 public:
 	// TODO DELETE TrackEntry(int x = 0, int y = 0, int width = 100, int height = 50);
@@ -82,6 +93,9 @@ private:
 };
 
 
+//////////////////////////////////////////////////////////////////////////////
+// Track /////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 /// a time sequence of the same shape (track), with the history of the shape occurances
 class Track {
 public:
@@ -94,7 +108,7 @@ public:
 	
 	/// adds motion detection to track
 	/// blob is clipped, if outside roi area (non-const parameter)
-	bool addTrackEntry(cv::Rect& blob, const cv::Size roi);
+    bool addTrackEntry(const cv::Rect& blob, const cv::Size roi);
 
 	/// adds substitute motion detection, extrapolating from prevoius size and velocity
 	bool addSubstitute(cv::Size roi);
@@ -171,8 +185,8 @@ private:
 	std::vector<TrackEntry> m_history; // dimension: time
 	int						m_id;
 	bool					m_isMarkedForDelete;
+    bool					m_isOccluded;
 	Direction				m_leavingRoiTo;
-	bool					m_isOccluded;
 	cv::Point2d				m_prevAvgVelocity;
 
 	cv::Point2d& updateAverageVelocity(cv::Size roi);
@@ -190,6 +204,10 @@ private:
 	int m_ID;
 };
 
+
+//////////////////////////////////////////////////////////////////////////////
+// Scene Tracker /////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 /// collection of all tracks, updates them based on the moving blobs from new frame:
 /// create new tracks for unassigned blobs, delete orphaned tracks
 /// evaluate counting criteria (track length, track confidence)

@@ -1,11 +1,14 @@
-#include "stdafx.h"
+#include "../../car-count/src/stdafx.h"
 #include <ctime>
 #include <boost/filesystem.hpp>
 #include "D:/Holger/app-dev/video-dev/car-count/include/frame_handler.h"
 #include "D:/Holger/app-dev/video-dev/car-count/include/tracker.h"
 #include "D:/Holger/app-dev/video-dev/utilities/inc/util-visual-trace.h"
 
+#if (_MSC_VER == 1600)
 #pragma warning(disable: 4482) // MSVC10: enum nonstd extension
+#endif
+
 
 extern TrackStateVec g_trackState;
 extern size_t g_idx;
@@ -54,7 +57,7 @@ std::string findWorkPath(int startFrame, int stopFrame, std::string descendPath)
 	using namespace std;
 
 	// directory prefix to look for
-	string dirPrefix = std::to_string((long long)startFrame) + " - " + std::to_string((long long)stopFrame);
+    string dirPrefix = std::to_string(static_cast<long long>(startFrame)) + " - " + std::to_string(static_cast<long long>(stopFrame));
 	string workPath("");
 	
 	// return empty string, if path does not exist
@@ -396,6 +399,7 @@ bool trackImageSequence(SceneTracker* pScene, std::string directory, std::string
 
 
 int main(int argc, char* argv[]) {
+    (void)argc; (void)argv;
 	using namespace std;
 	//string path320("D:/Users/Holger/counter/traffic320x240/");
 	//string path640("D:/Users/Holger/counter/traffic640x480_low_pass/");

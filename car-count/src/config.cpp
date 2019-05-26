@@ -4,7 +4,9 @@
 #include <cctype> // isdigit()
 #if defined (_WIN32)
 #include <io.h> // _access()
-#pragma warning(disable: 4996)
+#if (_MSC_VER == 1600)
+#pragma warning(disable: 4996) // MSVC: crt secure warnings
+#endif
 #else
 #include <unistd.h>
 #endif
@@ -679,13 +681,13 @@ bool makeDir(const std::string& dir) {
 		if (CreateDirectory(wDir.c_str(), 0))
 			return true;
 		DWORD error = GetLastError();
-		if (GetLastError() == ERROR_ALREADY_EXISTS)
+        if (error == ERROR_ALREADY_EXISTS)
 			return true;
 		else {
-			if (GetLastError() == ERROR_INVALID_NAME)
+            if (error == ERROR_INVALID_NAME)
 				std::cerr << "makeDir: invalid directory name: " << dir << std::endl;
 			else
-				std::cerr << "makeDir: last error code: " << GetLastError() << std::endl;
+                std::cerr << "makeDir: last error code: " << error << std::endl;
 			return false;
 		}
 	#elif defined (__linux__)
