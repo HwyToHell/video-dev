@@ -5,7 +5,7 @@
 #include "D:/Holger/app-dev/video-dev/car-count/include/tracker.h"
 #include "D:/Holger/app-dev/video-dev/utilities/inc/util-visual-trace.h"
 
-#if (_MSC_VER == 1600)
+#if !defined(__GNUG__) && (_MSC_VER == 1600)
 #pragma warning(disable: 4482) // MSVC10: enum nonstd extension
 #endif
 
@@ -93,7 +93,8 @@ std::vector<cv::Rect> motionRectsFromDebugFrame(cv::Mat imageBGR, cv::Scalar col
 	double deviationHue, double deviationSatVal) {
 	
 	// convert BGR to HSV color space for better separation based on single color value
-	cv::Vec3b colorVectorBGR(colorBGR(0), colorBGR(1), colorBGR(2)); 
+    cv::Vec3b colorVectorBGR(static_cast<unsigned char>(colorBGR(0)),
+                             static_cast<unsigned char>(colorBGR(1)), static_cast<unsigned char>(colorBGR(2)));
 	cv::Vec3b colorVectorHSV(0, 0, 0); 
 	cv::Mat3b matBGR(colorVectorBGR);
 	cv::Mat3b matHSV(colorVectorHSV);
@@ -150,8 +151,8 @@ void printTrackUpdate(cv::Mat trackImage, std::list<Track>* pDebugTracks) {
 	std::list<Track>::iterator iTrack = pDebugTracks->begin();
 	while (iTrack != pDebugTracks->end()) {
 		int confidence = iTrack->getConfidence();
-		int id = iTrack->getId();
-		int length = iTrack->getLength();
+        size_t id = iTrack->getId();
+        int length = static_cast<int>(iTrack->getLength());
 		//cv::Point2d vel2d = iTrack->getVelocity();
 		double velocity = iTrack->getVelocity().x;
 
@@ -216,8 +217,8 @@ cv::Mat printTrackUpdateScaled(std::list<Track>* pDebugTracks, cv::Size roi, int
 	std::list<Track>::iterator iTrack = pDebugTracks->begin();
 	while (iTrack != pDebugTracks->end()) {
 		int confidence = iTrack->getConfidence();
-		int id = iTrack->getId();
-		int length = iTrack->getLength();
+        size_t id = iTrack->getId();
+        int length = static_cast<int>(iTrack->getLength());
 		double velocity = iTrack->getVelocity().x;
 
 		cv::Rect rcActual = scaleRect(iTrack->getActualEntry().rect(), scaling);
@@ -282,8 +283,8 @@ bool setConfigRoiSize(Config* pConfig, std::string workPath, std::string filePre
 		return false;
 	}
 
-	bool success = pConfig->setParam("roi_width", to_string((long long) frame.size().width) );
-	success &= pConfig->setParam("roi_height", to_string((long long)frame.size().height) );
+    bool success = pConfig->setParam("roi_width", to_string(static_cast<long long>(frame.size().width)) );
+    success &= pConfig->setParam("roi_height", to_string(static_cast<long long>(frame.size().height)) );
 
 	if (success) {
 		cout << "ROI set to: " << pConfig->getParam("roi_width") << "x" << pConfig->getParam("roi_height") << endl;

@@ -1,12 +1,14 @@
 TEMPLATE = app
-CONFIG += console
+CONFIG += console c++11
 CONFIG -= app_bundle
 CONFIG -= qt
 QMAKE_CXXFLAGS += -std=c++11
-#unix: CONFIG += link_pkgconfig
-#unix: PKGCONFIG += opencv
-unix: CONFIG += link_pkgconfig
-unix: PKGCONFIG += sqlite3
+QMAKE_CXXFLAGS += -Wno-unknown-pragmas # suppress warning emitted by catch 1.3.5
+
+
+unix: {
+CONFIG += link_pkgconfig
+PKGCONFIG += sqlite3
 
 INCLUDEPATH += /home/holger/app-dev/Catch2/single_include/catch2
 INCLUDEPATH += /usr/local/include
@@ -38,28 +40,51 @@ LIBS += -lrt -lpthread
 LIBS += -lm -ldl
 LIBS += -lstdc++
 LIBS += -lz
+}
+
+
+win32: {
+INCLUDEPATH += $$(BOOST)
+INCLUDEPATH += D:/opencv-3.4.0-mingw/include
+INCLUDEPATH += D:/Holger/app-dev/sqlite/inc
+INCLUDEPATH += D:/Holger/app-dev/catch
+
+LIBS += -L$$(BOOST)/lib \
+    -lboost_filesystem-mgw73-mt-d-x32-1_67 \
+    -lboost_system-mgw73-mt-d-x32-1_67
+LIBS += -LD:/opencv-3.4.0-mingw/bin \
+    -lopencv_core340 \
+    -lopencv_highgui340 \
+    -lopencv_imgcodecs340 \
+    -lopencv_imgproc340 \
+    -lopencv_video340 \
+    -lopencv_videoio340
+LIBS += D:/Holger/app-dev/sqlite/bin/sqlite3.dll
+}
+
 
 SOURCES += \
+    ../../../cpp/src/id_pool.cpp \
+    ../../../cpp/src/pick_list.cpp \
+    ../../../cpp/src/program_options.cpp \
     ../../car-count/src/config.cpp \
-    ../../car-count/src/frame_handler.cpp \
     ../../car-count/src/recorder.cpp \
     ../../car-count/src/tracker.cpp \
-    ../src/config_test.cpp \
-    ../src/frame_handler_test.cpp \
+    ../../utilities/src/util-visual-trace.cpp \
     ../src/main.cpp \
+    ../src/occlusion_test_v1.cpp \
     ../src/program_options_test.cpp \
-    ../src/scene_tracker_test.cpp \
-    ../src/track_test.cpp \
-    ../../cpp/src/program_options.cpp
-
-include(deployment.pri)
-qtcAddDeployment()
+    ../src/scene_tracker_test_v1.cpp \
+    ../src/track_test_v1.cpp
 
 HEADERS += \
+    ../../../cpp/inc/id_pool.h \
+    ../../../cpp/inc/observer.h \
+    ../../../cpp/inc/pick_list.h \
+    ../../../cpp/inc/program_options.h \
+    ../../../cpp/inc/rlutil.h \
     ../../car-count/include/config.h \
-    ../../car-count/include/frame_handler.h \
     ../../car-count/include/recorder.h \
     ../../car-count/include/tracker.h \
-    ../../cpp/inc/observer.h \
-    ../../cpp/inc/program_options.h
-
+    ../../utilities/inc/util-visual-trace.h \
+    ../src/stdafx.h

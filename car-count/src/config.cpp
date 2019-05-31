@@ -2,23 +2,24 @@
 #include "../include/config.h"
 
 #include <cctype> // isdigit()
-#if defined (_WIN32)
-#include <io.h> // _access()
-#if (_MSC_VER == 1600)
-#pragma warning(disable: 4996) // MSVC: crt secure warnings
-#endif
-#else
+
+#if defined(__linux__)
 #include <unistd.h>
+#elif(_WIN32)
+#include <io.h> // _access()
+    #if !defined(__GNUG__) && (_MSC_VER == 1600)
+    #pragma warning(disable: 4996) // MSVC: crt secure warnings
+    #endif
 #endif
 
 
 using namespace std;
 
 // observer.h
-void updateObserver(Observer* pObserver) {
+/*void updateObserver(Observer* pObserver) {
 	pObserver->update();
 }
-
+*/
 Parameter::Parameter(std::string name, std::string type, std::string value) : mName(name), mType(type), mValue(value) {}
 
 std::string Parameter::getName() const { return mName; }
@@ -255,7 +256,7 @@ bool Config::queryDbSingle(const std::string& sql, std::string& value) {
 	// empty value indicate error
 	value.clear();
 
-	int rc = sqlite3_prepare_v2(m_dbHandle, sql.c_str(), -1, &stmt, 0);
+    int rc = sqlite3_prepare_v2(m_dbHandle, sql.c_str(), -1, &stmt, nullptr);
 	if (rc == SQLITE_OK)
 	{
 		int step = SQLITE_ERROR;
@@ -275,7 +276,7 @@ bool Config::queryDbSingle(const std::string& sql, std::string& value) {
 						if (sqlite3_column_type(stmt, nCol) == SQLITE_NULL) 
 							cerr << __LINE__ << " NULL value in table" << endl;
 						else
-							value = (const char*)sqlite3_column_text(stmt, nCol);
+                            value = reinterpret_cast<const char*>(sqlite3_column_text(stmt, nCol));
 					}
 				}
 				break;
@@ -678,7 +679,7 @@ bool makeDir(const std::string& dir) {
 		std::wstring wDir;
 		wDir.assign(dir.begin(), dir.end());
 
-		if (CreateDirectory(wDir.c_str(), 0))
+        if (CreateDirectory(wDir.c_str(), nullptr))
 			return true;
 		DWORD error = GetLastError();
         if (error == ERROR_ALREADY_EXISTS)

@@ -443,7 +443,7 @@ bool outsideRoi(const cv::Rect& rect, const cv::Size roi) {
 }
 // ---------------------------------------------------------------------------
 
-Track::Track(int id) : m_avgVelocity(0,0), m_confidence(0),
+Track::Track(size_t id) : m_avgVelocity(0,0), m_confidence(0),
 	m_counted(false), m_id(id), m_isMarkedForDelete(false), m_isOccluded(false),
 	m_leavingRoiTo(Direction::none), m_prevAvgVelocity(0,0)  {
 }
@@ -476,7 +476,7 @@ bool Track::addTrackEntry(const cv::Rect& blobIn, const cv::Size roi) {
 bool Track::addSubstitute(cv::Size roi) {
 	// TODO adjust for leaving and entering roi
 	// take average velocity and compose bbox from previous element
-	cv::Point2i velocity((int)round(m_avgVelocity.x), (int)round(m_avgVelocity.y));
+    cv::Point2i velocity( static_cast<int>(round(m_avgVelocity.x)), static_cast<int>(round(m_avgVelocity.y)) );
 	cv::Rect substitute = getActualEntry().rect() + velocity;
 
 	// TODO: use Track::avgHeight, avgWidth
@@ -493,9 +493,9 @@ const TrackEntry& Track::getActualEntry() const { return m_history.back(); }
 
 int Track::getConfidence() const { return m_confidence; }
 
-int Track::getHistory() const { return m_history.size(); }
+size_t Track::getHistory() const { return m_history.size(); }
 
-int Track::getId() const { return m_id; }
+size_t Track::getId() const { return m_id; }
 
 double Track::getLength() const {
 	double length = euclideanDist(m_history.front().centroid(), m_history.back().centroid());
@@ -503,12 +503,12 @@ double Track::getLength() const {
 }
 
 const TrackEntry& Track::getPreviousEntry() const { 
-	int idxPrevious = (int)m_history.size() - 2;
+    int idxPrevious = static_cast<int>(m_history.size()) - 2;
 	if (idxPrevious < 0) {
 		std::cerr << "Track::getPreviousEntry(): track has no previous entry, taking actual one" << std::endl;
 		idxPrevious = 0;
 	}
-	return m_history.at(idxPrevious);
+    return m_history.at(static_cast<size_t>(idxPrevious));
 }
 
 cv::Point2d Track::getVelocity() const { return m_avgVelocity; }
@@ -596,21 +596,21 @@ void Track::setOccluded(bool state) { m_isOccluded = state; }
 /// average velocity with recursive formula
 cv::Point2d& Track::updateAverageVelocity(cv::Size roi) {
 	const int window = 3;
-	int lengthHistory = m_history.size();
+    int lengthHistory = static_cast<int>(m_history.size());
     (void)roi;
 
 	// need at least two track entries in order to calculate velocity
 	if (lengthHistory > 1) {
 		int idxMax = lengthHistory - 1;
-		cv::Point2d actVelocity = m_history[idxMax].velocity();
+        cv::Point2d actVelocity = m_history[static_cast<size_t>(idxMax)].velocity();
 	
 		// moving average formula
 		if (idxMax <= window) { // window not fully populated yet
-			m_avgVelocity = (m_avgVelocity * (double)(idxMax - 1) + actVelocity) * (1.0 / (double)(idxMax));
+            m_avgVelocity = (m_avgVelocity * static_cast<double>(idxMax - 1) + actVelocity) * (1.0 / static_cast<double>(idxMax));
 		}
 		else { // window fully populated, remove window-1 velocity value
-			cv::Point2d oldVelocity = m_history[idxMax-window].velocity();
-			m_avgVelocity += (actVelocity - oldVelocity) * (1.0 / (double)window);
+            cv::Point2d oldVelocity = m_history[static_cast<size_t>(idxMax-window)].velocity();
+            m_avgVelocity += (actVelocity - oldVelocity) * (1.0 / static_cast<double>(window));
 		}
 	}
 	
@@ -748,9 +748,10 @@ SceneTracker::SceneTracker(Config* pConfig) :
 	Observer(pConfig),
 	m_occlusions(6) {
 	// max number of tracks assignable (9)
-	m_maxNoIDs = stoi(mSubject->getParam("max_n_of_tracks"));
-	for (int i = m_maxNoIDs; i > 0; --i) // fill trackIDs with 9 ints
-		m_trackIDs.push_back(i);
+    m_maxNoIDs = stoul(mSubject->getParam("max_n_of_tracks"));
+    for (size_t n = m_maxNoIDs; n > 0; --n) { // fill trackIDs with 9 ints
+        m_trackIDs.push_back(n);
+    }
 	// update all other relevant parameters from Config
 	update();
 }
@@ -774,7 +775,7 @@ std::list<Track>* SceneTracker::assignBlobs(std::list<cv::Rect>& blobs) {
 	typedef std::list<cv::Rect>::iterator TiterBlobs;
 	TiterBlobs iBlob = blobs.begin();
 	while (iBlob != blobs.end()) {
-		int trackID = nextTrackID();
+        size_t trackID = nextTrackID();
 		if (trackID > 0) {
 			Track newTrack(trackID);
 			// blob must not be added, if outside roi
@@ -805,14 +806,15 @@ void SceneTracker::attachCountRecorder(CountRecorder* pRecorder) {
 ///  classifying conditions for trucks:
 ///  - average width and height
 class CntAndClassify {
-	int mFrameCnt;
+    int m_frameCount;
 	int m_debugCount;
 	ClassifyVehicle m_classify;
 	CountResults m_vehicleCount;
 public:
-	CntAndClassify(int frameCnt, ClassifyVehicle classify) : mFrameCnt(frameCnt), m_classify(classify) {m_debugCount = 0;}
+    CntAndClassify(int frameCnt, ClassifyVehicle classify) : m_frameCount(frameCnt), m_classify(classify) {m_debugCount = 0;}
 
 	void operator()(Track& track) {
+        (void)m_frameCount;
 		double trackLength = track.getLength();
 		
 		if (track.getConfidence() > m_classify.countConfidence) {
@@ -860,6 +862,7 @@ public:
 	Classify(int frameCnt, ClassifyVehicle classify) : m_frameCount(frameCnt), m_classify(classify) {m_debugCount = 0;}
 
 	void operator()(Track& track) {
+        (void)m_frameCount;
 		double trackLength = track.getLength();
 
 		// track not counted yet and required track length reached
@@ -957,7 +960,7 @@ std::list<Track>* SceneTracker::deleteReversingTracks() {
 	while (iTrack != m_tracks.end()) {
 		// track reverses (only for tracks outside occlusion)
 		if( iTrack->isReversingX(backlash) && !iTrack->isOccluded() ) { 
-			int id = this->nextTrackID();
+            size_t id = this->nextTrackID();
 
 			// if trackID available: create new track from lastTrackEntry, delete reversing track
 			if (id > 0) {
@@ -987,11 +990,11 @@ const std::list<Occlusion>* SceneTracker::occlusionList() {
 
 // DEBUG
 struct Trk {
-	int id;
+    size_t id;
 	int confidence;
 	double velocity;
 	bool counted;
-	Trk(int id_, int confidence_, double velocity_, bool counted_) : id(id_), confidence(confidence_), velocity(velocity_), counted(counted_) {}
+    Trk(size_t id_, int confidence_, double velocity_, bool counted_) : id(id_), confidence(confidence_), velocity(velocity_), counted(counted_) {}
 };
 
 
@@ -1012,18 +1015,18 @@ bool SceneTracker::isOverlappingTracks() {
 }
 
 
-int SceneTracker::nextTrackID()
+size_t SceneTracker::nextTrackID()
 {
 	if (m_trackIDs.empty()) return 0;
 	else {
-		int id = m_trackIDs.back();
+        size_t id = m_trackIDs.back();
 		m_trackIDs.pop_back();
 		return id;
 	}
 }
 
 
-bool SceneTracker::returnTrackID(int id)
+bool SceneTracker::returnTrackID(size_t id)
 {
 	if (id > 0 ) {
 		if (m_trackIDs.size() < m_maxNoIDs) {
@@ -1223,7 +1226,7 @@ void adjustSubstPos(const cv::Rect& blob, cv::Rect& rcRight, cv::Rect& rcLeft) {
 
 
 cv::Rect calcSubstitute(const Track& track) {
-	cv::Point velocity((int)round(track.getVelocity().x), (int)round(track.getVelocity().y));
+    cv::Point velocity( static_cast<int>(round(track.getVelocity().x)), static_cast<int>(round(track.getVelocity().y)) );
 	cv::Rect substitute = track.getActualEntry().rect() + velocity;
 	return substitute;
 }
@@ -1365,7 +1368,7 @@ void printTrackRect(Track& track) {
 }
 
 void printVelocity(Track& track) {
-	int id = track.getId();
+    size_t id = track.getId();
 	double velocity = track.getVelocity().x;
 	int leftEdge = track.getActualEntry().rect().x;
 	int rightEdge = track.getActualEntry().rect().x + track.getActualEntry().rect().width;

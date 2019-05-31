@@ -1,17 +1,18 @@
 #pragma once
+#include <opencv2/opencv.hpp>
 
 
-#if defined (_WIN32)
-#if (_MSC_VER == 1600)
-#pragma warning(disable: 4482) // MSVC10: enum nonstd extension
-#endif
-#include "../../cpp/inc/observer.h"
-#include "../../cpp/inc/id_pool.h"
-#include "recorder.h"
-#else
+#if defined(__linux__)
 #include "/home/holger/app-dev/cpp/inc/observer.h"
 #include "/home/holger/app-dev/cpp/inc/id_pool.h"
 #include "../include/recorder.h"
+#elif(_WIN32)
+    #if !defined(__GNUG__) && (_MSC_VER == 1600)
+    #pragma warning(disable: 4482) // MSVC10: enum nonstd extension
+    #endif
+#include "../../cpp/inc/observer.h"
+#include "../../cpp/inc/id_pool.h"
+#include "recorder.h"
 #endif
 
 // forward decls
@@ -104,7 +105,7 @@ public:
 	/// construct track with initial track entry
 	/// \param[in] blob initial track entry
 	/// \param[in] id track ID
-    Track(int id = 0);
+    Track(size_t id = 0);
 	
 	/// adds motion detection to track
 	/// blob is clipped, if outside roi area (non-const parameter)
@@ -123,10 +124,10 @@ public:
 	int getConfidence() const;
 
 	/// returns history size
-	int getHistory() const;
+    size_t getHistory() const;
 
 	/// returns track ID
-	int getId() const;
+    size_t getId() const;
 
 	/// returns track length
 	double getLength() const;
@@ -183,7 +184,7 @@ private:
 	int						m_confidence;
 	bool					m_counted;
 	std::vector<TrackEntry> m_history; // dimension: time
-	int						m_id;
+    size_t					m_id;
 	bool					m_isMarkedForDelete;
     bool					m_isOccluded;
 	Direction				m_leavingRoiTo;
@@ -196,12 +197,12 @@ private:
 /// find matching tracks by ID
 class TrackID_eq : public std::unary_function<Track, bool> {
 public: 
-	TrackID_eq (const int id) : m_ID(id) {}
+    TrackID_eq (const size_t id) : m_ID(id) {}
 	inline bool operator() (const Track& track) const { 
 		return (m_ID == track.getId());
 	}
 private:
-	int m_ID;
+    size_t m_ID;
 };
 
 
@@ -244,7 +245,7 @@ public:
 	bool isOverlappingTracks();
 
 	/// returns ID for new track, if max number of tracks not exceeded
-	int nextTrackID();
+    size_t nextTrackID();
 
 	/// return pointer to list of overlapping tracks
 	const std::list<Occlusion>* occlusionList();
@@ -253,7 +254,7 @@ public:
 	void printVehicles();
 
 	/// releases ID for deleted track
-	bool returnTrackID(int id);
+    bool returnTrackID(size_t id);
 
 	// TODO make private in final version
 	/// set isOccluded flag for each occluded track, calculates occlusion rectangle
@@ -287,14 +288,14 @@ private:
 	CountRecorder*		m_recorder; 
 	OcclusionIdList		m_occlusions;
 	std::list<Track>	m_tracks;
-	std::list<int>		m_trackIDs;
+    std::list<size_t>   m_trackIDs;
 };
 
 
 struct TrackState {
 public:
 	TrackState(std::string name, std::list<cv::Rect> blobs, const std::list<Occlusion>* occlusions, std::list<Track> tracks) : 
-	  m_name(name), m_blobs(blobs), m_occlusions(*occlusions), m_tracks(tracks) {};
+      m_name(name), m_blobs(blobs), m_occlusions(*occlusions), m_tracks(tracks) {}
 	std::string				m_name;
 	std::list<cv::Rect>		m_blobs;
 	std::list<Occlusion>	m_occlusions;

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "../../video-dev/car-count/src/stdafx.h"
 
 #include "../../../cpp/inc/id_pool.h"
 #include "../../../cpp/inc/pick_list.h"
@@ -44,10 +44,10 @@ bool breakEscContinueEnter() {
 }
 
 
-Occlusion createOcclusionAt(Track& trackRight, Track& trackLeft, cv::Size roi,  int collisionX, cv::Size blobSize, cv::Point velocityRight, cv::Point velocityLeft) {
+Occlusion createOcclusionAt(Track& trackRight, Track& trackLeft, cv::Size roi, int collisionX, cv::Size blobSize, cv::Point velocityRight, cv::Point velocityLeft) {
 	
 	// adjust collision point, if necessary
-	size_t colXAct(collisionX);
+    int colXAct(collisionX);
 	if (collisionX > roi.width) {
 		std::cerr << "collision point: " << collisionX << "outside roi: " << roi.width << std::endl;
 		colXAct = roi.width / 2;
@@ -135,10 +135,16 @@ bool examineBlobTimeSeries(const BlobTimeSeries& blobTmSer, cv::Size roi) {
 		key = cv::waitKeyEx(0);
 		switch (key) {
 			case Key::arrowUp:
-				idx = idx > 0 ? --idx : maxIdx;
+                if (idx > 0)
+                    --idx;
+                else
+                    idx = maxIdx;
 				break;
 			case Key::arrowDown:
-				idx = idx < maxIdx ? ++idx : 0;
+                if (idx < maxIdx)
+                    ++idx;
+                else
+                    idx = 0;
 				break;
 		}
 		cout << "idx: " << idx << "    \r"; // \r returns to beginning of line
@@ -174,10 +180,16 @@ bool examineTrackState(const TrackStateVec trackState, cv::Size roi) {
 		key = cv::waitKeyEx(0);
 		switch (key) {
 			case Key::arrowUp:
-				g_idx = g_idx > 0 ? --g_idx : maxIdx;
+                if (g_idx > 0)
+                    --g_idx;
+                else
+                    g_idx = maxIdx;
 				break;
 			case Key::arrowDown:
-				g_idx = g_idx < maxIdx ? ++g_idx : 0;
+                if (g_idx < maxIdx)
+                    ++g_idx;
+                else
+                    g_idx = 0;
 				break;
 		}
 		// cout << "idx: " << g_idx << "    \r"; // \r returns to beginning of line
@@ -241,9 +253,9 @@ BlobTimeSeries moveBlobsThroughRoi(const cv::Size& roi, const MovingBlob& right,
 }
 
 
-BlobTimeSeries moveOcclusionThroughRoi(cv::Size roi, MovingBlob right, MovingBlob left, unsigned int collisionX, unsigned int gapStartX) {
+BlobTimeSeries moveOcclusionThroughRoi(cv::Size roi, MovingBlob right, MovingBlob left, int collisionX, int gapStartX) {
 	// collision point
-	int colX = (collisionX == 0) ? roi.width / 2 : collisionX;
+    int colX = (collisionX == 0) ? (roi.width / 2) : collisionX;
 	colX = (colX > roi.width) ? roi.width : colX;
 	cv::Point colOrgLeft(colX,70);
 	cv::Point colOrgRight(colX-right.size.width, 70);
@@ -298,6 +310,7 @@ void printBlobsAt(cv::Mat& canvas, const BlobTimeSeries& timeSeries, const size_
 		using namespace std;
 		// check upper index bound
 		size_t idxTime = (idx >= timeSeries.size()) ? timeSeries.size()-1 : idx;
+        (void)idxTime;
 		cv::Scalar color[3] = {red, green, yellow};
 		size_t idxColor = 0;
 
@@ -360,7 +373,6 @@ void printOcclusions(cv::Mat& canvas, const std::list<Occlusion>& occlusions) {
 void printTrack(cv::Mat& canvas, const Track& track, cv::Scalar color) {
 	cv::Rect rcActual = track.getActualEntry().rect();
 	cv::Rect rcPrev = track.getPreviousEntry().rect();
-	int id = track.getId();
 	cv::rectangle(canvas, rcActual, color, Line::thick);
 	cv::rectangle(canvas, rcPrev, color, Line::thin);
 	return;
@@ -375,7 +387,7 @@ void printTracks(cv::Mat& canvas, const std::list<Track>& tracks, bool withPrevi
 	// loop through available tracks
 	std::list<Track>::const_iterator iTrack = tracks.begin();
 	while (iTrack != tracks.end()) {
-		int id = iTrack->getId();
+        size_t id = iTrack->getId();
 		cv::Rect rcActual = iTrack->getActualEntry().rect();
 		if (withPrevious) {
 			cv::Rect rcPrev = iTrack->getPreviousEntry().rect();
@@ -405,7 +417,7 @@ void printTracksAt(cv::Mat& canvas, const TrackTimeSeries& timeSeries, size_t id
 		cv::Rect rcActual = iTrack->getActualEntry().rect();
 		cv::Rect rcPrev = iTrack->getPreviousEntry().rect();
 
-		int id = iTrack->getId();
+        size_t id = iTrack->getId();
 		cv::rectangle(canvas, rcActual, color[id % nColors], Line::thick);
 		cv::rectangle(canvas, rcPrev, color[id % nColors], Line::thin);
 		++iTrack;
@@ -426,7 +438,7 @@ void printTrackInfo(cv::Mat& canvas, const std::list<Track>& tracks) {
 
 		// collect track info
 		int confidence = iTrack->getConfidence();
-		int id = iTrack->getId();
+        size_t id = iTrack->getId();
 		int length = static_cast<int>(iTrack->getLength());
 		double velocity = iTrack->getVelocity().x;
 
@@ -539,7 +551,6 @@ bool showBlobsAt(const BlobTimeSeries& blobTmSer, cv::Size roi, size_t idxUnchec
 	using namespace std;
 	// check upper index bound
 	size_t idx = (idxUnchecked >= blobTmSer.size()) ? blobTmSer.size()-1 : idxUnchecked;
-	size_t maxIdx = blobTmSer.size();
 
 	cv::Mat canvas(roi, CV_8UC3, black);
 	size_t idxWindow = 0;
@@ -548,9 +559,7 @@ bool showBlobsAt(const BlobTimeSeries& blobTmSer, cv::Size roi, size_t idxUnchec
 		// window appearance
 		double scaleX = 2.0;
 		int offsetX = 0;
-		int winPosX = offsetX + idxWindow * (roi.width * static_cast<int>(scaleX) + 6);
-		int menuBar = 30;
-		int winHeight = roi.height * static_cast<int>(scaleX) + menuBar;
+        int winPosX = offsetX + static_cast<int>(idxWindow) * (roi.width * static_cast<int>(scaleX) + 6);
 
 		// print blobs and tracks on roi-sized canvax
 		canvas.setTo(black);
@@ -574,7 +583,7 @@ bool showBlobsAt(const BlobTimeSeries& blobTmSer, cv::Size roi, size_t idxUnchec
 }
 
 
-void showBlobAssignment(std::string winName, const Track& track, cv::Rect blob, cv::Size roi, int id) {
+void showBlobAssignment(std::string winName, const Track& track, cv::Rect blob, cv::Size roi, size_t id) {
 	cv::namedWindow(winName);
 	cv::moveWindow(winName, 1060, 0);
 	cv::Mat canvas(roi, CV_8UC3, black);
@@ -618,7 +627,6 @@ bool showTrackStateAt(const TrackStateVec& state, cv::Size roi, size_t idxUnchec
 	using namespace std;
 	// check upper index bound
 	size_t idx = (idxUnchecked >= state.size()) ? state.size()-1 : idxUnchecked;
-	size_t maxIdx = state.size();
 
 	cv::Mat canvas(roi, CV_8UC3, black);
 	size_t idxWindow = 0;
@@ -627,9 +635,8 @@ bool showTrackStateAt(const TrackStateVec& state, cv::Size roi, size_t idxUnchec
 		// window appearance
 		double scaleX = 2.0;
 		int offsetX = 640;
-		int winPosX = offsetX + idxWindow * (roi.width * static_cast<int>(scaleX) + 6);
-		int menuBar = 30;
-		int winHeight = roi.height * static_cast<int>(scaleX) + menuBar;
+        int winPosX = offsetX + static_cast<int>(idxWindow) * (roi.width * static_cast<int>(scaleX) + 6);
+
 		// print blobs and tracks on roi-sized canvax
 		canvas.setTo(black);
 		printBlobs(canvas, iState->m_blobs);

@@ -109,7 +109,7 @@ void printUsageHelp();
 bool showBlobsAt(const BlobTimeSeries& blobTmSer, cv::Size roi, size_t idxUnchecked);
 
 /// create highgui window and show assignment of blobs to single track
-void showBlobAssignment(std::string winName, const Track& track, cv::Rect blob, cv::Size roi, int id = 0);
+void showBlobAssignment(std::string winName, const Track& track, cv::Rect blob, cv::Size roi, size_t id = 0);
 
 /// at trace time step idx: show highgui windows for all recorded track states
 bool showTrackStateAt(const TrackStateVec& state, cv::Size roi, size_t idxUnchecked);

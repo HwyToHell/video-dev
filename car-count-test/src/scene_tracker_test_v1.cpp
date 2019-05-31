@@ -24,7 +24,7 @@ OppositeTracks createTracksBeforeOcclusion(const cv::Size roi,  const int collis
 	const cv::Size blobSize, const cv::Point velocityRight, const cv::Point velocityLeft) {
 	
 	// adjust collision point, if necessary
-	size_t colXAct(collisionX);
+    int colXAct(collisionX);
 	if (collisionX > roi.width) {
 		std::cerr << "collision point: " << collisionX << "outside roi: " << roi.width << std::endl;
 		colXAct = roi.width / 2;
@@ -66,8 +66,8 @@ TEST_CASE("#sce001 getTrackID, returnTrackID", "[Scene]") {
 		REQUIRE(scene.nextTrackID() == 0);
 
 		SECTION("trackID returned -> is returned 9 times") {
-			for (int i = 1; i < 10; ++i) {
-				REQUIRE(scene.returnTrackID(i));
+            for (size_t n = 1; n < 10; ++n) {
+                REQUIRE(scene.returnTrackID(n));
 				//cout << "returned id[" << i << "]: " << i << endl;
 			}
 			REQUIRE(scene.returnTrackID(10) == false);
@@ -258,7 +258,7 @@ TEST_CASE("#sce004 deleteMarkedTracks", "[Scene]") {
 	cv::Rect blobBottom(cv::Point(0,50), blobSize);
 	
 	list<cv::Rect> blobs;
-	list<Track>* pTracks;
+    list<Track>* pTracks = nullptr;
 	for (int i=1; i<=nUpdates; ++i) {
 		blobTop += velocity;
 		blobBottom += velocity;
@@ -507,7 +507,7 @@ TEST_CASE("#sce010 setOcclusion", "[Scene]") {
 	cv::Rect rcRight(orgRight, size);
 	cv::Rect rcLeft(orgLeft, size);
 	list<cv::Rect> blobs;
-	list<Track>* pTracks;
+    list<Track>* pTracks = nullptr;
 	for (int i=1; i<=nUpdates; ++i) {
 		rcRight += velocity;
 		blobs.push_back(rcRight);
@@ -706,6 +706,7 @@ TEST_CASE("#sce015 updateTracks", "[Scene]") {
 
 				blobs.push_back(blobIntersect);
 				list<Track>* pTracks = scene.updateTracks(blobs, i);
+                (void)pTracks;
 
 				// all blobs have been assigned
 				REQUIRE( 0 == blobs.size() );

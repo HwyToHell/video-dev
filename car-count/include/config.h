@@ -1,12 +1,12 @@
 #pragma once
 #include "tracker.h"
 
-#if defined (_WIN32)
-#include "../../cpp/inc/observer.h"
-#include "../../cpp/inc/program_options.h"
-#else
+#if defined(__linux__)
 #include "/home/holger/app-dev/cpp/inc/observer.h"
 #include "/home/holger/app-dev/cpp/inc/program_options.h"
+#elif(_WIN32)
+#include "../../cpp/inc/observer.h"
+#include "../../cpp/inc/program_options.h"
 #endif
 
 
