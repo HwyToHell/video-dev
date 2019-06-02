@@ -4,10 +4,6 @@
 #include "../../car-count/include/frame_handler.h"
 #include "D:/Holger/app-dev/video-dev/utilities/inc/util-visual-trace.h"
 
-// suppress "ignoring #pragma gcc diagnostics [-Wunknowns-pragmas] emitted by catch
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wno-unknown-pragmas"
-
 // enable visual trace
 static bool g_traceOcclusion = false; // static == internal linkage (file)
 
