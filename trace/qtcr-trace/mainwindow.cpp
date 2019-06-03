@@ -16,6 +16,19 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+long extractNumber(const QString& fileName, const QString& prefix) {
+    if (fileName.startsWith(prefix)) {
+        int startIdx = fileName.indexOf(QChar('_'));
+        QString changeableFileName(fileName);
+        changeableFileName.remove(0, startIdx + 1);
+        int stopIdx = changeableFileName.indexOf(QChar('.'));
+        changeableFileName.truncate(stopIdx);
+        qDebug() << changeableFileName;
+        return changeableFileName.toLong();
+    } else {
+        return -1;
+    }
+}
 
 // TODO implement directory validity check
 //  - file naming convention ("debug" prefix)
@@ -32,8 +45,9 @@ void MainWindow::on_actionSelect_Directory_triggered()
 
     QDirIterator itDir(inputDir);
     while(itDir.hasNext()) {
-
         qDebug() << itDir.next();
         qDebug() << itDir.fileName();
+        long idx = extractNumber(itDir.fileName(), QString("debug"));
+        qDebug() << idx;
     }
 }
