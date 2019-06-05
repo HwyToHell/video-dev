@@ -18,13 +18,13 @@ MainWindow::~MainWindow()
 
 long extractNumber(const QString& fileName, const QString& prefix) {
     if (fileName.startsWith(prefix)) {
-        int startIdx = fileName.indexOf(QChar('_'));
-        QString changeableFileName(fileName);
-        changeableFileName.remove(0, startIdx + 1);
-        int stopIdx = changeableFileName.indexOf(QChar('.'));
-        changeableFileName.truncate(stopIdx);
-        qDebug() << changeableFileName;
-        return changeableFileName.toLong();
+        int idxLeft = fileName.indexOf(QChar('_')) + 1;
+        int idxRight = fileName.indexOf(QChar('.'));
+        int length = idxRight - idxLeft;
+
+        QString numberString = fileName.mid(idxLeft, length);
+        qDebug() << numberString;
+        return numberString.toLong();
     } else {
         return -1;
     }
@@ -43,11 +43,25 @@ void MainWindow::on_actionSelect_Directory_triggered()
 
     qDebug() << inputDir;
 
+    QMap<int, QString> map;
+
     QDirIterator itDir(inputDir);
     while(itDir.hasNext()) {
         qDebug() << itDir.next();
         qDebug() << itDir.fileName();
         long idx = extractNumber(itDir.fileName(), QString("debug"));
         qDebug() << idx;
+        if (idx > 0) {
+            map.insert(idx, itDir.fileName());
+        }
     }
+
+    //QTextStream out(stdout);
+    //out << "map" << endl;
+
+    qDebug() << "map debug";
+    for (auto tuple: map.keys()) {
+        qDebug() << tuple << ", " << map.value(tuple);
+    }
+
 }
