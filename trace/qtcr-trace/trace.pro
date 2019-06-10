@@ -26,10 +26,12 @@ LIBS += D:/Holger/app-dev/sqlite/bin/sqlite3.dll
 
 SOURCES += \
         main.cpp \
-        mainwindow.cpp
+        mainwindow.cpp \
+        trackimages.cpp
 
 HEADERS += \
-        mainwindow.h
+        mainwindow.h \
+        trackimages.h
 
 FORMS += \
         mainwindow.ui

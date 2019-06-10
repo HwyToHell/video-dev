@@ -325,7 +325,7 @@
   </action>
   <action name="actionRead_Contents">
    <property name="text">
-    <string>Read Contents</string>
+    <string>Re-Scan</string>
    </property>
   </action>
   <action name="actionApply_Tracking_Algorithm">

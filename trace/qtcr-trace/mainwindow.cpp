@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "trackimages.h"
 
 #include <QtWidgets>
 #include <QDir>
@@ -25,6 +26,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     m_settingsFile = QApplication::applicationDirPath() + "/trace.ini";
     loadSettings();
+    readDirContents();
 }
 
 
@@ -65,27 +67,15 @@ void MainWindow::loadSettings() {
 void MainWindow::on_actionApply_Tracking_Algorithm_triggered()
 {
     ui->statusBar->showMessage("start executing algorithm ...", 3000);
+    SceneTracker* pScene = nullptr;
+    QMap<int, QString> inputFiles = m_inputFiles;
+    trackImages(inputFiles, pScene);
 }
 
 
 void MainWindow::on_actionRead_Contents_triggered()
 {
-    ui->statusBar->showMessage("reading directory contents ...", 3000);
-
-    m_inputFiles = populateFileMap(m_workDir);
-
-    if (!m_inputFiles.empty()) {
-        ui->idx_begin->display(m_inputFiles.firstKey());
-        ui->idx_end->display(m_inputFiles.lastKey());
-        ui->next->setEnabled(true);
-        ui->previous->setEnabled(true);
-
-        m_itInputFile = m_inputFiles.begin();
-        ui->idx_actual->display(m_itInputFile.key());
-    } else {
-        ui->statusBar->showMessage("no segmentation results in working directory");
-    }
-
+    readDirContents();
 }
 
 
@@ -98,14 +88,7 @@ void MainWindow::on_actionSelect_triggered()
 
     ui->workdir_output->setText(m_workDir);
 
-    ui->statusBar->showMessage("directory changed, please read directory contents");
-
-    /*
-    qDebug() << "map debug";
-    for (auto tuple: m_inputFiles.keys()) {
-        qDebug() << tuple << ", " << m_inputFiles.value(tuple);
-    }
-    */
+    readDirContents();
 }
 
 
@@ -140,6 +123,25 @@ QMap<int, QString> populateFileMap(const QString& workDir) {
         }
     }
     return fileMap;
+}
+
+
+ void MainWindow::readDirContents() {
+    ui->statusBar->showMessage("reading directory contents ...", 3000);
+
+    m_inputFiles = populateFileMap(m_workDir);
+
+    if (!m_inputFiles.empty()) {
+        ui->idx_begin->display(m_inputFiles.firstKey());
+        ui->idx_end->display(m_inputFiles.lastKey());
+        ui->next->setEnabled(true);
+        ui->previous->setEnabled(true);
+
+        m_itInputFile = m_inputFiles.begin();
+        ui->idx_actual->display(m_itInputFile.key());
+    } else {
+        ui->statusBar->showMessage("no segmentation results in working directory");
+    }
 }
 
 

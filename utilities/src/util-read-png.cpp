@@ -10,9 +10,6 @@
 #endif
 
 
-extern TrackStateVec g_trackState;
-extern size_t g_idx;
-
 /// locate work path with post-processed frames based on frame number
 std::string findWorkPath(int startFrame, int stopFrame, std::string descendPath);
 

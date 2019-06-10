@@ -18,6 +18,7 @@ public:
 
 private:
     void loadSettings();
+    void readDirContents();
     void saveSettings();
 
 private slots:
