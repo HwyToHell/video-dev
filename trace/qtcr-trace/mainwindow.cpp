@@ -19,14 +19,20 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+    // disable some gui elements, until valid settings have been loaded
     ui->setupUi(this);
     setLCDRed(ui->idx_actual);
     ui->next->setDisabled(true);
     ui->previous->setDisabled(true);
 
+    // load settings (ini file method on all platforms)
     m_settingsFile = QApplication::applicationDirPath() + "/trace.ini";
     loadSettings();
     readDirContents();
+
+    // init tracker
+    m_pConfig = std::unique_ptr<Config>(new Config);
+    m_pTracker = std::unique_ptr<SceneTracker>(new SceneTracker(m_pConfig.get()));
 }
 
 
@@ -67,9 +73,14 @@ void MainWindow::loadSettings() {
 void MainWindow::on_actionApply_Tracking_Algorithm_triggered()
 {
     ui->statusBar->showMessage("start executing algorithm ...", 3000);
-    SceneTracker* pScene = nullptr;
     QMap<int, QString> inputFiles = m_inputFiles;
-    trackImages(inputFiles, pScene);
+
+    if (!m_inputFiles.empty()) {
+        if ( !trackImages(m_workDir, inputFiles, m_pTracker.get()) )
+         ui->statusBar->showMessage("error reading segmentation image");
+    } else {
+        ui->statusBar->showMessage("no segmentation results in working directory");
+    }
 }
 
 

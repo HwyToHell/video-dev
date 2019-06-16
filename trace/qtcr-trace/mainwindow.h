@@ -4,6 +4,10 @@
 #include <QMainWindow>
 #include <QMap>
 
+#include "D:/Holger/app-dev/video-dev/car-count/include/config.h"
+#include "D:/Holger/app-dev/video-dev/car-count/include/tracker.h"
+
+
 namespace Ui {
 class MainWindow;
 }
@@ -41,6 +45,9 @@ private:
     QMap<int, QString>::const_iterator m_itInputFile;
     QString m_settingsFile;
     QString m_workDir;
+
+    std::unique_ptr<Config> m_pConfig;
+    std::unique_ptr<SceneTracker> m_pTracker;
 };
 
 #endif // MAINWINDOW_H

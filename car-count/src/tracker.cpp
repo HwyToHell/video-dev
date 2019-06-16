@@ -1175,7 +1175,7 @@ std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs, long lo
 	pOcclusions = setOcclusion();
     (void)pOcclusions;
 	// DEBUG
-	/*
+    /*
 	cout << "idx#" << frameCnt << endl;
 	if (pOcclusions->size() >=1) {
 		cout << "right occluded: " << pOcclusions->front().movingRight()->isOccluded() << endl;

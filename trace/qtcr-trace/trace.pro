@@ -25,11 +25,22 @@ LIBS += D:/Holger/app-dev/sqlite/bin/sqlite3.dll
 }
 
 SOURCES += \
+        ../../../cpp/src/id_pool.cpp \
+        ../../../cpp/src/program_options.cpp \
+        ../../car-count/src/config.cpp \
+        ../../car-count/src/tracker.cpp \
+        ../../utilities/src/util-visual-trace.cpp \
         main.cpp \
         mainwindow.cpp \
         trackimages.cpp
 
 HEADERS += \
+        ../../../cpp/inc/id_pool.h \
+        ../../../cpp/inc/program_options.h \
+        ../../car-count/include/config.h \
+        ../../car-count/include/frame_handler.h \
+        ../../car-count/include/tracker.h \
+        ../../utilities/inc/util-visual-trace.h \
         mainwindow.h \
         trackimages.h
 

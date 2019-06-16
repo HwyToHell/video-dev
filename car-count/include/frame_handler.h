@@ -1,5 +1,5 @@
 #pragma once
-#include <memory> // shared_ptr
+#include <memory> // unique_ptr
 #if defined (_WIN32)
 #if (_MSC_VER == 1600)
 #pragma warning(disable: 4996) // MSVC: crt secure warnings
@@ -14,7 +14,7 @@
 //////////////////////////////////////////////////////////////////////////////
 // Types /////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-enum Align {left, right};		// C++11: enum class Align {left, right};
+enum class Align {left, right};		// C++11: enum class Align {left, right};
 enum Line { thin=1, thick=2};
 
 typedef cv::Rect_ <double> Rect2d; // TODO delete, if opencv > v3.0 
