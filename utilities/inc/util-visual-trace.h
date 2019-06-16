@@ -1,4 +1,6 @@
 #pragma once
+#include <map>
+
 #include "../../car-count/include/tracker.h"
 
 /// functions for visual tracing of blob assignment to track and scene tracker
@@ -21,6 +23,7 @@ enum Key {
 typedef std::vector<std::list<cv::Rect>> BlobTimeSeries;
 typedef std::vector<std::list<Track>> TrackTimeSeries;
 typedef std::vector<std::list<TrackState>> TrackStateVec;
+typedef std::map<long long, std::list<TrackState>> TrackStateMap;
 
 struct MovingBlob {
 	cv::Point	origin;
@@ -36,6 +39,9 @@ struct MovingBlob {
 //////////////////////////////////////////////////////////////////////////////
 extern TrackStateVec g_trackState;
 extern size_t g_idx;
+extern TrackStateMap g_trackStateMap;
+extern std::map<long long, std::list<TrackState>>::const_iterator g_itCurrent;
+
 
 
 //////////////////////////////////////////////////////////////////////////////

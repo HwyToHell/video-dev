@@ -12,6 +12,8 @@
 // declared in util-visual-trace.h
 TrackStateVec g_trackState;
 size_t g_idx;
+TrackStateMap g_trackStateMap;
+std::map<long long, std::list<TrackState>>::const_iterator g_itCurrent;
 
 //////////////////////////////////////////////////////////////////////////////
 // Local functions ///////////////////////////////////////////////////////////

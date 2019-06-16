@@ -72,15 +72,15 @@ std::list<cv::Rect> motionRectsFromDebugImage(cv::Mat imageBGR, cv::Scalar color
 
 
 bool trackImages(const QString& directory, QMap<int, QString> imgFiles, SceneTracker* pScene) {
+    using namespace std;
     bool success = false;
-    qDebug() << "foreach";
-    int idx = 0;
+
     foreach(int iKey, imgFiles.keys()) {
-        qDebug() << iKey << "," << imgFiles.value(iKey);
+        // DEBUG show files
+        // qDebug() << iKey << "," << imgFiles.value(iKey);
 
         // read images to mat
         std::string fileName = directory.toStdString() + "/" + imgFiles.value(iKey).toStdString();
-        using namespace std;
         cout << fileName << endl;
 
         cv::Mat image = cv::imread(fileName);
@@ -89,10 +89,10 @@ bool trackImages(const QString& directory, QMap<int, QString> imgFiles, SceneTra
             // check, if image not empty
             std::list<cv::Rect> motionRectList = motionRectsFromDebugImage(image, blue);
             std::list<Track>* pDebugTracks;
-            pDebugTracks = pScene->updateTracks(motionRectList, idx);
-            ++idx;
+            pDebugTracks = pScene->updateTracks(motionRectList, iKey);
 
-            // show tracks
+            // DEBUG show tracks
+            /*
             cv::Mat canvas(image.size(), CV_8UC3, black);
             printTracks(canvas, *pDebugTracks);
             cv::imshow("tracks", canvas);
@@ -100,13 +100,59 @@ bool trackImages(const QString& directory, QMap<int, QString> imgFiles, SceneTra
                 std::cout << "ESC pressed -> end sequence" << std::endl;
                 break;
             }
+            */
             success = true;
         } else {
             success = false;
             break;
         }
     }
+    // g_trackStateMap not empty
+    qDebug( "track state size: %i", g_trackStateMap.size() );
+    if ( g_trackStateMap.size() == 0 ) {
+        success = false;
+        cerr << "track state empty" << endl;
+    } else {
+        // set first index as active
+        g_itCurrent = g_trackStateMap.cbegin();
+    }
     return success;
 }
 
 
+
+int maxIdxTrackState() {
+    return static_cast<int>( g_trackStateMap.cbegin()->first );
+}
+
+int minIdxTrackState() {
+    return static_cast<int>( (--g_trackStateMap.cend())->first );
+}
+
+int nextTrackState() {
+    ++g_itCurrent;
+    // tail reached -> set iterator to head
+    if ( g_itCurrent == g_trackStateMap.cend()  )
+        g_itCurrent = g_trackStateMap.cbegin();
+    //qDebug() << "idx:" << g_itCurrent->first;
+    return static_cast<int>( g_itCurrent->first );
+}
+
+
+
+int prevTrackState() {
+    if ( g_itCurrent != g_trackStateMap.cbegin()  )
+        --g_itCurrent;
+    // head reached -> set iterator to tail
+    else
+        g_itCurrent = --g_trackStateMap.end();
+    //qDebug() << "idx:" << g_itCurrent->first;
+    return static_cast<int>( g_itCurrent->first );
+}
+
+bool isTraceValid() {
+    if (g_trackStateMap.size() > 0)
+        return true;
+    else
+        return false;
+}

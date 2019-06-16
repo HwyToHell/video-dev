@@ -1189,6 +1189,7 @@ std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs, long lo
 
 	// DEBUG
 	g_trackState.push_back(traceTrackState);	
+    g_trackStateMap.insert(std::pair<long long, std::list<TrackState>>(frameCnt, traceTrackState));
     return &m_tracks;
 }
 

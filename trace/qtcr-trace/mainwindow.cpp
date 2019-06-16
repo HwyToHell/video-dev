@@ -24,6 +24,7 @@ MainWindow::MainWindow(QWidget *parent) :
     setLCDRed(ui->idx_actual);
     ui->next->setDisabled(true);
     ui->previous->setDisabled(true);
+    ui->menuApply_Tracking->setDisabled(true);
 
     // load settings (ini file method on all platforms)
     m_settingsFile = QApplication::applicationDirPath() + "/trace.ini";
@@ -75,9 +76,21 @@ void MainWindow::on_actionApply_Tracking_Algorithm_triggered()
     ui->statusBar->showMessage("start executing algorithm ...", 3000);
     QMap<int, QString> inputFiles = m_inputFiles;
 
-    if (!m_inputFiles.empty()) {
-        if ( !trackImages(m_workDir, inputFiles, m_pTracker.get()) )
-         ui->statusBar->showMessage("error reading segmentation image");
+    // show message if reading error
+    if ( !trackImages(m_workDir, inputFiles, m_pTracker.get()) )
+        ui->statusBar->showMessage("error reading segmentation image");
+    else
+        ui->statusBar->showMessage("no segmentation results in working directory");
+
+    // if no tracking results -> don't show keys
+    if (isTraceValid()) {
+        ui->idx_begin->display(minIdxTrackState());
+        ui->idx_end->display(maxIdxTrackState());
+        ui->idx_actual->display(minIdxTrackState());
+
+        ui->next->setEnabled(true);
+        ui->previous->setEnabled(true);
+
     } else {
         ui->statusBar->showMessage("no segmentation results in working directory");
     }
@@ -105,21 +118,35 @@ void MainWindow::on_actionSelect_triggered()
 
 void MainWindow::on_next_clicked()
 {
+    // advance index of g_trackStateMap
+    nextTrackState();
+
+
+
+    // DEBUG show traversing over map
+    /*
     if ( m_itInputFile == (m_inputFiles.cend()-1) )
         m_itInputFile = m_inputFiles.cbegin();
     else
         ++m_itInputFile;
     ui->idx_actual->display(m_itInputFile.key());
+    */
 }
 
 
 void MainWindow::on_previous_clicked()
 {
+    // lower index of g_trackStateMap
+    prevTrackState();
+
+    // DEBUG show traversing over map
+    /*
     if ( m_itInputFile == m_inputFiles.cbegin() )
         m_itInputFile = (m_inputFiles.cend()-1);
     else
         --m_itInputFile;
     ui->idx_actual->display(m_itInputFile.key());
+    */
 }
 
 
@@ -143,13 +170,7 @@ QMap<int, QString> populateFileMap(const QString& workDir) {
     m_inputFiles = populateFileMap(m_workDir);
 
     if (!m_inputFiles.empty()) {
-        ui->idx_begin->display(m_inputFiles.firstKey());
-        ui->idx_end->display(m_inputFiles.lastKey());
-        ui->next->setEnabled(true);
-        ui->previous->setEnabled(true);
-
-        m_itInputFile = m_inputFiles.begin();
-        ui->idx_actual->display(m_itInputFile.key());
+        ui->menuApply_Tracking->setEnabled(true);
     } else {
         ui->statusBar->showMessage("no segmentation results in working directory");
     }
