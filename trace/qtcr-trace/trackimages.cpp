@@ -5,10 +5,50 @@
 #include <string>
 #include <opencv2/opencv.hpp>
 #include <QDebug>
+#include <QList>
 
 #include "D:/Holger/app-dev/video-dev/car-count/include/config.h"
 #include "D:/Holger/app-dev/video-dev/car-count/include/frame_handler.h"
 #include "D:/Holger/app-dev/video-dev/utilities/inc/util-visual-trace.h"
+
+
+QImage cvMatToQImage(const cv::Mat& inMat) {
+    QImage image( inMat.data, inMat.cols, inMat.rows, static_cast<int>(inMat.step),
+                    QImage::Format_RGB888 );
+      return image.rgbSwapped();
+}
+
+
+QPixmap cvMatToQPixmap(const cv::Mat& inMat) {
+    return QPixmap::fromImage( cvMatToQImage( inMat ) );
+}
+
+
+const std::list<TrackState>* getTrackState() {
+    return &g_itCurrent->second;
+}
+
+
+int numberOfTrackStates() {
+    return static_cast<int>(g_itCurrent->second.size());
+}
+
+bool isTraceValid() {
+    if (g_trackStateMap.size() > 0)
+        return true;
+    else
+        return false;
+}
+
+
+int maxIdxTrackState() {
+    return static_cast<int>( g_trackStateMap.cbegin()->first );
+}
+
+
+int minIdxTrackState() {
+    return static_cast<int>( (--g_trackStateMap.cend())->first );
+}
 
 
 std::list<cv::Rect> motionRectsFromDebugImage(cv::Mat imageBGR, cv::Scalar colorBGR,
@@ -66,9 +106,37 @@ std::list<cv::Rect> motionRectsFromDebugImage(cv::Mat imageBGR, cv::Scalar color
 }
 
 
+QList<QPixmap> getCurrImgList(cv::Size roi) {
+    QList<QPixmap> imgList;
+    for (auto trackState: g_itCurrent->second) {
+        cv::Mat canvas(roi, CV_8UC3, black);
+        printTracks(canvas, trackState.m_tracks, true);
+        QPixmap pic = cvMatToQPixmap(canvas);
+        imgList.push_back(pic);
+    }
+    return imgList;
+}
 
 
+int nextTrackState() {
+    ++g_itCurrent;
+    // tail reached -> set iterator to head
+    if ( g_itCurrent == g_trackStateMap.cend()  )
+        g_itCurrent = g_trackStateMap.cbegin();
+    //qDebug() << "idx:" << g_itCurrent->first;
+    return static_cast<int>( g_itCurrent->first );
+}
 
+
+int prevTrackState() {
+    if ( g_itCurrent != g_trackStateMap.cbegin()  )
+        --g_itCurrent;
+    // head reached -> set iterator to tail
+    else
+        g_itCurrent = --g_trackStateMap.end();
+    //qDebug() << "idx:" << g_itCurrent->first;
+    return static_cast<int>( g_itCurrent->first );
+}
 
 
 bool trackImages(const QString& directory, QMap<int, QString> imgFiles, SceneTracker* pScene) {
@@ -90,6 +158,7 @@ bool trackImages(const QString& directory, QMap<int, QString> imgFiles, SceneTra
             std::list<cv::Rect> motionRectList = motionRectsFromDebugImage(image, blue);
             std::list<Track>* pDebugTracks;
             pDebugTracks = pScene->updateTracks(motionRectList, iKey);
+            (void)pDebugTracks;
 
             // DEBUG show tracks
             /*
@@ -108,7 +177,7 @@ bool trackImages(const QString& directory, QMap<int, QString> imgFiles, SceneTra
         }
     }
     // g_trackStateMap not empty
-    qDebug( "track state size: %i", g_trackStateMap.size() );
+    //qDebug( "track state size: %i", g_trackStateMap.size() );
     if ( g_trackStateMap.size() == 0 ) {
         success = false;
         cerr << "track state empty" << endl;
@@ -117,42 +186,4 @@ bool trackImages(const QString& directory, QMap<int, QString> imgFiles, SceneTra
         g_itCurrent = g_trackStateMap.cbegin();
     }
     return success;
-}
-
-
-
-int maxIdxTrackState() {
-    return static_cast<int>( g_trackStateMap.cbegin()->first );
-}
-
-int minIdxTrackState() {
-    return static_cast<int>( (--g_trackStateMap.cend())->first );
-}
-
-int nextTrackState() {
-    ++g_itCurrent;
-    // tail reached -> set iterator to head
-    if ( g_itCurrent == g_trackStateMap.cend()  )
-        g_itCurrent = g_trackStateMap.cbegin();
-    //qDebug() << "idx:" << g_itCurrent->first;
-    return static_cast<int>( g_itCurrent->first );
-}
-
-
-
-int prevTrackState() {
-    if ( g_itCurrent != g_trackStateMap.cbegin()  )
-        --g_itCurrent;
-    // head reached -> set iterator to tail
-    else
-        g_itCurrent = --g_trackStateMap.end();
-    //qDebug() << "idx:" << g_itCurrent->first;
-    return static_cast<int>( g_itCurrent->first );
-}
-
-bool isTraceValid() {
-    if (g_trackStateMap.size() > 0)
-        return true;
-    else
-        return false;
 }

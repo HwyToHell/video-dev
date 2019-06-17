@@ -1,12 +1,15 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "trackimages.h"
 
 #include <QtWidgets>
 #include <QDir>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QVariant>
+
+#include "trackimages.h"
+#include "D:/Holger/app-dev/video-dev/utilities/inc/util-visual-trace.h"
+
 
 long extractNumber(const QString& fileName, const QString& prefix);
 
@@ -119,7 +122,12 @@ void MainWindow::on_actionSelect_triggered()
 void MainWindow::on_next_clicked()
 {
     // advance index of g_trackStateMap
-    nextTrackState();
+    int idx = nextTrackState();
+    ui->idx_actual->display(idx);
+
+    cv::Size roi(200,200);
+    QList<QPixmap> imgList = getCurrImgList(roi);
+    ui->trace_image_1->setPixmap(imgList.front());
 
 
 
@@ -137,7 +145,12 @@ void MainWindow::on_next_clicked()
 void MainWindow::on_previous_clicked()
 {
     // lower index of g_trackStateMap
-    prevTrackState();
+    int idx = prevTrackState();
+    ui->idx_actual->display(idx);
+
+    cv::Size roi(200,200);
+    QList<QPixmap> imgList = getCurrImgList(roi);
+    ui->trace_image_1->setPixmap(imgList.front());
 
     // DEBUG show traversing over map
     /*
