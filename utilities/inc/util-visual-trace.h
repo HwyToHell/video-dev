@@ -106,6 +106,10 @@ void printTrack(cv::Mat& canvas, const Track& track, cv::Scalar color);
 /// print list of tracks
 void printTracks(cv::Mat& canvas, const std::list<Track>& tracks, bool withPrevious = false);
 
+/// print list of tracks with scaling
+void printTracksScaled(cv::Mat& canvas, const std::list<Track>& tracks,
+                       const cv::Size& dispSize, bool withPrevious = false);
+
 /// at trace time step idx: print list of tracks on canvas
 void printTracksAt(cv::Mat& canvas, const TrackTimeSeries& timeSeries, size_t idxUnchecked);
 

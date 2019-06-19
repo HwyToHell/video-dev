@@ -294,9 +294,10 @@ private:
 
 struct TrackState {
 public:
-	TrackState(std::string name, std::list<cv::Rect> blobs, const std::list<Occlusion>* occlusions, std::list<Track> tracks) : 
-      m_name(name), m_blobs(blobs), m_occlusions(*occlusions), m_tracks(tracks) {}
+    TrackState(std::string name, cv::Size roi, std::list<cv::Rect> blobs, const std::list<Occlusion>* occlusions, std::list<Track> tracks) :
+      m_name(name), m_roi(roi), m_blobs(blobs), m_occlusions(*occlusions), m_tracks(tracks) {}
 	std::string				m_name;
+    cv::Size                m_roi;
 	std::list<cv::Rect>		m_blobs;
 	std::list<Occlusion>	m_occlusions;
 	std::list<Track>		m_tracks;

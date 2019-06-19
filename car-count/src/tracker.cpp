@@ -1135,7 +1135,7 @@ std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs, long lo
 	// DEBUG
 	using namespace std;
 	std::list<TrackState> traceTrackState;
-	traceTrackState.push_back(TrackState("before blob assign", blobs, m_occlusions.getList(), m_tracks));
+    traceTrackState.push_back(TrackState("before blob assign", m_roiSize, blobs, m_occlusions.getList(), m_tracks));
 	// END_DEBUG
 
 	//1 assign blobs based on occlusion
@@ -1151,7 +1151,7 @@ std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs, long lo
 	}
 
 	// DEBUG
-	traceTrackState.push_back(TrackState("after blob assign", blobs, m_occlusions.getList(), m_tracks));
+    traceTrackState.push_back(TrackState("after blob assign", m_roiSize, blobs, m_occlusions.getList(), m_tracks));
 	/*cout << "after occlusion assign - blobs: " << blobs.size() << endl;
 	for_each(blobs.begin(), blobs.end(), printRect);
 	cout << "after occlusion assign - tracks: " << m_tracks.size() << endl;
@@ -1184,7 +1184,7 @@ std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs, long lo
 	for_each(m_tracks.begin(), m_tracks.end(), printIsOccluded);
 	*/
 	// DEBUG
-	traceTrackState.push_back(TrackState("after deletion", blobs, m_occlusions.getList(), m_tracks));
+    traceTrackState.push_back(TrackState("after deletion",  m_roiSize, blobs, m_occlusions.getList(), m_tracks));
 	// END_DEBUG
 
 	// DEBUG

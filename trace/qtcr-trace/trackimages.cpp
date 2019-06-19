@@ -24,6 +24,17 @@ QPixmap cvMatToQPixmap(const cv::Mat& inMat) {
 }
 
 
+QSize getRoiSize(QString fileName) {
+    QSize size(0,0);
+    cv::Mat image = cv::imread(fileName.toStdString());
+    if (!image.empty()) {
+        size.setWidth(image.size().width);
+        size.setHeight(image.size().height);
+    }
+    return size;
+}
+
+
 const std::list<TrackState>* getTrackState() {
     return &g_itCurrent->second;
 }
@@ -42,12 +53,12 @@ bool isTraceValid() {
 
 
 int maxIdxTrackState() {
-    return static_cast<int>( g_trackStateMap.cbegin()->first );
+    return static_cast<int>( (--g_trackStateMap.cend())->first );
 }
 
 
 int minIdxTrackState() {
-    return static_cast<int>( (--g_trackStateMap.cend())->first );
+    return static_cast<int>( g_trackStateMap.cbegin()->first );
 }
 
 
@@ -106,11 +117,12 @@ std::list<cv::Rect> motionRectsFromDebugImage(cv::Mat imageBGR, cv::Scalar color
 }
 
 
-QList<QPixmap> getCurrImgList(cv::Size roi) {
+QList<QPixmap> getCurrImgList(QSize dispImgSize) {
     QList<QPixmap> imgList;
+    cv::Size dispSize(dispImgSize.width(), dispImgSize.height());
     for (auto trackState: g_itCurrent->second) {
-        cv::Mat canvas(roi, CV_8UC3, black);
-        printTracks(canvas, trackState.m_tracks, true);
+        cv::Mat canvas(dispSize, CV_8UC3, black);
+        printTracksScaled(canvas, trackState.m_tracks, trackState.m_roi, true);
         QPixmap pic = cvMatToQPixmap(canvas);
         imgList.push_back(pic);
     }
@@ -139,6 +151,13 @@ int prevTrackState() {
 }
 
 
+void setRoiToImgSize(Config* pConfig, QString workDir, QString file) {
+    std::string fileName = workDir.toStdString() + "/" + file.toStdString();
+    cv::Mat img = cv::imread(fileName);
+    setRoiToConfig(pConfig, img.size());
+}
+
+
 bool trackImages(const QString& directory, QMap<int, QString> imgFiles, SceneTracker* pScene) {
     using namespace std;
     bool success = false;
@@ -149,7 +168,7 @@ bool trackImages(const QString& directory, QMap<int, QString> imgFiles, SceneTra
 
         // read images to mat
         std::string fileName = directory.toStdString() + "/" + imgFiles.value(iKey).toStdString();
-        cout << fileName << endl;
+        //cout << fileName << endl;
 
         cv::Mat image = cv::imread(fileName);
         if (!image.empty()){

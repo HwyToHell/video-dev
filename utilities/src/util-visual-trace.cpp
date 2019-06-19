@@ -407,6 +407,45 @@ void printTracks(cv::Mat& canvas, const std::list<Track>& tracks, bool withPrevi
 }
 
 
+
+cv::Rect scaleRect(cv::Rect rect, double scalingX, double scalingY) {
+    double orgX = scalingX * rect.x;
+    double orgY = scalingY * rect.y;
+    double width = scalingX * rect.width;
+    double height = scalingY * rect.height;
+    cv::Rect scaled(static_cast<int>(orgX), static_cast<int>(orgY), static_cast<int>(width), static_cast<int>(height));
+    return scaled;
+}
+
+
+void printTracksScaled(cv::Mat& canvas, const std::list<Track>& tracks, const cv::Size& roi, bool withPrevious) {
+    // appearance
+    cv::Scalar color[] = {blue, green, red, yellow};
+    size_t nColors = sizeof(color) / sizeof(color[0]);
+
+    // scaling factors from display size
+    double scaleX = static_cast<double>(canvas.size().width) / static_cast<double>(roi.width);
+    double scaleY = static_cast<double>(canvas.size().height) / static_cast<double>(roi.height);
+
+    // loop through available tracks
+    std::list<Track>::const_iterator iTrack = tracks.begin();
+    while (iTrack != tracks.end()) {
+        size_t id = iTrack->getId();
+        cv::Rect rcActual = scaleRect(iTrack->getActualEntry().rect(), scaleX, scaleY);
+        if (withPrevious) {
+            cv::Rect rcPrev = scaleRect(iTrack->getPreviousEntry().rect(), scaleX, scaleY);
+            cv::rectangle(canvas, rcActual, color[id % nColors], Line::thick);
+            cv::rectangle(canvas, rcPrev, color[id % nColors], Line::thin);
+        } else {
+            cv::rectangle(canvas, rcActual, color[id % nColors], Line::thin);
+        }
+        ++iTrack;
+    }
+
+    return;
+}
+
+
 void printTracksAt(cv::Mat& canvas, const TrackTimeSeries& timeSeries, size_t idxUnchecked) {
 	// appearance
 	cv::Scalar color[] = {blue, green, red, yellow};

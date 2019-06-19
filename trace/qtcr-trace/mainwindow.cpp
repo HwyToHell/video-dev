@@ -29,6 +29,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->previous->setDisabled(true);
     ui->menuApply_Tracking->setDisabled(true);
 
+    // default image size 200 x 200
+    m_imgSize = QSize(200, 200);
     // load settings (ini file method on all platforms)
     m_settingsFile = QApplication::applicationDirPath() + "/trace.ini";
     loadSettings();
@@ -79,11 +81,13 @@ void MainWindow::on_actionApply_Tracking_Algorithm_triggered()
     ui->statusBar->showMessage("start executing algorithm ...", 3000);
     QMap<int, QString> inputFiles = m_inputFiles;
 
+    // set config->roi to image size, update SceneTracker
+    setRoiToImgSize(m_pConfig.get(), m_workDir, inputFiles.first());
+    m_pTracker.get()->update();
+
     // show message if reading error
     if ( !trackImages(m_workDir, inputFiles, m_pTracker.get()) )
         ui->statusBar->showMessage("error reading segmentation image");
-    else
-        ui->statusBar->showMessage("no segmentation results in working directory");
 
     // if no tracking results -> don't show keys
     if (isTraceValid()) {
@@ -93,7 +97,6 @@ void MainWindow::on_actionApply_Tracking_Algorithm_triggered()
 
         ui->next->setEnabled(true);
         ui->previous->setEnabled(true);
-
     } else {
         ui->statusBar->showMessage("no segmentation results in working directory");
     }
@@ -125,8 +128,7 @@ void MainWindow::on_next_clicked()
     int idx = nextTrackState();
     ui->idx_actual->display(idx);
 
-    cv::Size roi(200,200);
-    QList<QPixmap> imgList = getCurrImgList(roi);
+    QList<QPixmap> imgList = getCurrImgList(m_imgSize);
     ui->trace_image_1->setPixmap(imgList.front());
 
 
@@ -148,8 +150,7 @@ void MainWindow::on_previous_clicked()
     int idx = prevTrackState();
     ui->idx_actual->display(idx);
 
-    cv::Size roi(200,200);
-    QList<QPixmap> imgList = getCurrImgList(roi);
+    QList<QPixmap> imgList = getCurrImgList(m_imgSize);
     ui->trace_image_1->setPixmap(imgList.front());
 
     // DEBUG show traversing over map
@@ -193,8 +194,6 @@ QMap<int, QString> populateFileMap(const QString& workDir) {
 void MainWindow::saveSettings() {
     QSettings settings(m_settingsFile, QSettings::IniFormat);
     settings.setValue( "work_dir", m_workDir );
-
-    qDebug() << "work dir: " << m_workDir;
 }
 
 

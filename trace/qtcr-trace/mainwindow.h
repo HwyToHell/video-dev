@@ -41,6 +41,7 @@ private:
     int m_idxActual;
     int m_idxBegin;
     int m_idxEnd;
+    QSize m_imgSize;
     QMap<int, QString> m_inputFiles;
     QMap<int, QString>::const_iterator m_itInputFile;
     QString m_settingsFile;
