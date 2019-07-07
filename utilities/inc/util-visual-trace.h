@@ -91,6 +91,9 @@ void printBlobs(cv::Mat& canvas, const std::list<cv::Rect>& blobs);
 /// at trace time step idx: print list of blobs on canvas
 void printBlobsAt(cv::Mat& canvas, const BlobTimeSeries& timeSeries, const size_t idx);
 
+/// print list of blobs with scaling
+void printBlobsScaled(cv::Mat& canvas, const std::list<cv::Rect>& blobs, const cv::Size& roi);
+
 /// print frame index in upper left corner of existing canvas
 void printIndex(cv::Mat& canvas, size_t index);
 

@@ -13,7 +13,14 @@ QImage cvMatToQImage(const cv::Mat& inMat);
 
 QPixmap cvMatToQPixmap(const cv::Mat& inMat);
 
+// print blob image on pixmap
+QPixmap getCurrBlobImage(QSize dispImgSize);
+
+// get list of track images
 QList<QPixmap> getCurrImgList(QSize dispImgSize);
+
+// print track image on pixmap
+QPixmap getTrackImage(const TrackState& trackState, QSize dispImgSize);
 
 QSize getRoiSize(QString fileName);
 

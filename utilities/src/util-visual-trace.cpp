@@ -281,6 +281,16 @@ BlobTimeSeries moveOcclusionThroughRoi(cv::Size roi, MovingBlob right, MovingBlo
 }
 
 
+cv::Rect scaleRect(cv::Rect rect, double scalingX, double scalingY) {
+    double orgX = scalingX * rect.x;
+    double orgY = scalingY * rect.y;
+    double width = scalingX * rect.width;
+    double height = scalingY * rect.height;
+    cv::Rect scaled(static_cast<int>(orgX), static_cast<int>(orgY), static_cast<int>(width), static_cast<int>(height));
+    return scaled;
+}
+
+
 void printBlob(cv::Mat& canvas, cv::Rect blob, cv::Scalar color) {
 	// make size one line smaller for better visibiliy
 	cv::Rect rcPrint(blob);
@@ -311,26 +321,44 @@ void printBlobs(cv::Mat& canvas, const std::list<cv::Rect>& blobs) {
 
 
 void printBlobsAt(cv::Mat& canvas, const BlobTimeSeries& timeSeries, const size_t idx) {
-		using namespace std;
-		// check upper index bound
-		size_t idxTime = (idx >= timeSeries.size()) ? timeSeries.size()-1 : idx;
-        (void)idxTime;
-		cv::Scalar color[3] = {red, green, yellow};
-		size_t idxColor = 0;
+    using namespace std;
+    // check upper index bound
+    size_t idxTime = (idx >= timeSeries.size()) ? timeSeries.size()-1 : idx;
+    (void)idxTime;
+    cv::Scalar color[3] = {red, green, yellow};
+    size_t idxColor = 0;
 
-		// loop through available blobs
-		list<cv::Rect>::const_iterator iBlob = timeSeries[idx].begin();
-		while (iBlob != timeSeries[idx].end()) {
-			cv::Rect rcPrint(*iBlob);
-			rcPrint.height -= 2;
-			rcPrint.width -= 2;
-			rcPrint.x += 1;
-			rcPrint.y +=1;
-			cv::rectangle(canvas, rcPrint, color[idxColor]);
-			++iBlob;
-		}
+    // loop through available blobs
+    list<cv::Rect>::const_iterator iBlob = timeSeries[idx].begin();
+    while (iBlob != timeSeries[idx].end()) {
+        cv::Rect rcPrint(*iBlob);
+        rcPrint.height -= 2;
+        rcPrint.width -= 2;
+        rcPrint.x += 1;
+        rcPrint.y +=1;
+        cv::rectangle(canvas, rcPrint, color[idxColor]);
+        ++iBlob;
+    }
 
-		return;
+    return;
+}
+
+void printBlobsScaled(cv::Mat& canvas, const std::list<cv::Rect>& blobs, const cv::Size& roi) {
+    // appearance
+    cv::Scalar color = white;
+
+    // scaling factors from display size
+    double scaleX = static_cast<double>(canvas.size().width) / static_cast<double>(roi.width);
+    double scaleY = static_cast<double>(canvas.size().height) / static_cast<double>(roi.height);
+
+    // loop through blobs
+    std::list<cv::Rect>::const_iterator iBlob = blobs.begin();
+    while (iBlob != blobs.end()) {
+        cv::Rect rcActual = scaleRect(*iBlob, scaleX, scaleY);
+        cv::rectangle(canvas, rcActual, color, Line::thick);
+        ++iBlob;
+    }
+    return;
 }
 
 
@@ -404,17 +432,6 @@ void printTracks(cv::Mat& canvas, const std::list<Track>& tracks, bool withPrevi
 	}
 
 	return;
-}
-
-
-
-cv::Rect scaleRect(cv::Rect rect, double scalingX, double scalingY) {
-    double orgX = scalingX * rect.x;
-    double orgY = scalingY * rect.y;
-    double width = scalingX * rect.width;
-    double height = scalingY * rect.height;
-    cv::Rect scaled(static_cast<int>(orgX), static_cast<int>(orgY), static_cast<int>(width), static_cast<int>(height));
-    return scaled;
 }
 
 

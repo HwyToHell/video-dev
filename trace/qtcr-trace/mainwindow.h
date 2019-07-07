@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QMap>
+#include <QtWidgets>
 
 #include "D:/Holger/app-dev/video-dev/car-count/include/config.h"
 #include "D:/Holger/app-dev/video-dev/car-count/include/tracker.h"
@@ -37,6 +38,10 @@ private slots:
     void on_previous_clicked();
 
 private:
+    struct TraceVisu{
+        QLabel* description;
+        QLabel* picture;
+    };
     Ui::MainWindow *ui;
     int m_idxActual;
     int m_idxBegin;
@@ -46,7 +51,7 @@ private:
     QMap<int, QString>::const_iterator m_itInputFile;
     QString m_settingsFile;
     QString m_workDir;
-
+    QList<TraceVisu> m_traceVisu;
     std::unique_ptr<Config> m_pConfig;
     std::unique_ptr<SceneTracker> m_pTracker;
 };

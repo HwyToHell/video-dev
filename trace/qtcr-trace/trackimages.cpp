@@ -120,13 +120,35 @@ std::list<cv::Rect> motionRectsFromDebugImage(cv::Mat imageBGR, cv::Scalar color
 QList<QPixmap> getCurrImgList(QSize dispImgSize) {
     QList<QPixmap> imgList;
     cv::Size dispSize(dispImgSize.width(), dispImgSize.height());
-    for (auto trackState: g_itCurrent->second) {
+    for (auto trackStateList: g_itCurrent->second) {
         cv::Mat canvas(dispSize, CV_8UC3, black);
-        printTracksScaled(canvas, trackState.m_tracks, trackState.m_roi, true);
+        printTracksScaled(canvas, trackStateList.m_tracks, trackStateList.m_roi, true);
         QPixmap pic = cvMatToQPixmap(canvas);
         imgList.push_back(pic);
     }
     return imgList;
+}
+
+QPixmap getCurrBlobImage(QSize dispImgSize) {
+    cv::Size dispSize(dispImgSize.width(), dispImgSize.height());
+    cv::Mat canvas(dispSize, CV_8UC3, black);
+
+    // take blobs from first track state
+    TrackState trackState(g_itCurrent->second.front());
+    printBlobsScaled(canvas, trackState.m_blobs, trackState.m_roi);
+
+    QPixmap blobImage = cvMatToQPixmap(canvas);
+    return blobImage;
+}
+
+
+QPixmap getTrackImage(const TrackState& trackState, QSize dispImgSize) {
+    cv::Size dispSize(dispImgSize.width(), dispImgSize.height());
+    cv::Mat canvas(dispSize, CV_8UC3, black);
+
+    printTracksScaled(canvas, trackState.m_tracks, trackState.m_roi, true);
+    QPixmap trackImage = cvMatToQPixmap(canvas);
+    return trackImage;
 }
 
 

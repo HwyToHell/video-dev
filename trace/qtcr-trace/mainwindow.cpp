@@ -1,7 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-#include <QtWidgets>
+
 #include <QDir>
 #include <QSettings>
 #include <QStandardPaths>
@@ -17,6 +17,14 @@ QMap<int, QString> populateFileMap(const QString& workDir);
 
 void setLCDRed(QLCDNumber* pLCD);
 
+void showBlobs(Ui::MainWindow* uimain, const QSize& imgSize);
+
+void showTracks();
+
+
+//////////////////////////////////////////////////////////////////////////////
+// MainWindow ////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -46,21 +54,6 @@ MainWindow::~MainWindow()
 {
     saveSettings();
     delete ui;
-}
-
-
-long extractNumber(const QString& fileName, const QString& prefix) {
-    if (fileName.startsWith(prefix)) {
-        int idxLeft = fileName.indexOf(QChar('_')) + 1;
-        int idxRight = fileName.indexOf(QChar('.'));
-        int length = idxRight - idxLeft;
-
-        QString numberString = fileName.mid(idxLeft, length);
-        return numberString.toLong();
-
-    } else {
-        return -1;
-    }
 }
 
 
@@ -97,6 +90,30 @@ void MainWindow::on_actionApply_Tracking_Algorithm_triggered()
 
         ui->next->setEnabled(true);
         ui->previous->setEnabled(true);
+
+        ui->trace_desc_1->setText(QString("Blobs"));
+        showBlobs(ui, m_imgSize);
+
+        // add widgets depending on lenght of TrackState list
+        for (auto trackState: g_trackStateMap.begin()->second) {
+            TraceVisu traceVisu;
+
+            // create description label
+            QString labelText(QString::fromStdString(trackState.m_name));
+            qDebug() << labelText;
+            traceVisu.description = new QLabel(labelText);
+
+            // create picture label
+            traceVisu.picture = new QLabel();
+            traceVisu.picture->setPixmap(getTrackImage(trackState, m_imgSize));
+
+            // save label pointers and add widgets
+            m_traceVisu.push_back(traceVisu);
+            int column = m_traceVisu.size();
+            ui->gridLayout_5->addWidget(traceVisu.description, 0, column);
+            ui->gridLayout_5->addWidget(traceVisu.picture, 1, column);
+        }
+
     } else {
         ui->statusBar->showMessage("no segmentation results in working directory");
     }
@@ -128,8 +145,13 @@ void MainWindow::on_next_clicked()
     int idx = nextTrackState();
     ui->idx_actual->display(idx);
 
-    QList<QPixmap> imgList = getCurrImgList(m_imgSize);
-    ui->trace_image_1->setPixmap(imgList.front());
+    // show blob image in label trace_image_1
+    showBlobs(ui, m_imgSize);
+
+
+    // TODO: use for dynamically added widgets
+    //QList<QPixmap> imgList = getCurrImgList(m_imgSize);
+    //ui->trace_image_1->setPixmap(imgList.front());
 
 
 
@@ -150,8 +172,11 @@ void MainWindow::on_previous_clicked()
     int idx = prevTrackState();
     ui->idx_actual->display(idx);
 
-    QList<QPixmap> imgList = getCurrImgList(m_imgSize);
-    ui->trace_image_1->setPixmap(imgList.front());
+    showBlobs(ui, m_imgSize);
+
+    // TODO: use for dynamically added widgets
+    //QList<QPixmap> imgList = getCurrImgList(m_imgSize);
+    //ui->trace_image_1->setPixmap(imgList.front());
 
     // DEBUG show traversing over map
     /*
@@ -161,20 +186,6 @@ void MainWindow::on_previous_clicked()
         --m_itInputFile;
     ui->idx_actual->display(m_itInputFile.key());
     */
-}
-
-
-QMap<int, QString> populateFileMap(const QString& workDir) {
-    QMap<int, QString> fileMap;
-    QDirIterator itDir(workDir);
-    while(itDir.hasNext()) {
-        itDir.next();
-        long idx = extractNumber(itDir.fileName(), QString("debug"));
-        if (idx > 0) {
-            fileMap.insert(idx, itDir.fileName());
-        }
-    }
-    return fileMap;
 }
 
 
@@ -197,8 +208,50 @@ void MainWindow::saveSettings() {
 }
 
 
+//////////////////////////////////////////////////////////////////////////////
+// Functions /////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+long extractNumber(const QString& fileName, const QString& prefix) {
+    if (fileName.startsWith(prefix)) {
+        int idxLeft = fileName.indexOf(QChar('_')) + 1;
+        int idxRight = fileName.indexOf(QChar('.'));
+        int length = idxRight - idxLeft;
+
+        QString numberString = fileName.mid(idxLeft, length);
+        return numberString.toLong();
+
+    } else {
+        return -1;
+    }
+}
+
+
+QMap<int, QString> populateFileMap(const QString& workDir) {
+    QMap<int, QString> fileMap;
+    QDirIterator itDir(workDir);
+    while(itDir.hasNext()) {
+        itDir.next();
+        long idx = extractNumber(itDir.fileName(), QString("debug"));
+        if (idx > 0) {
+            fileMap.insert(idx, itDir.fileName());
+        }
+    }
+    return fileMap;
+}
+
+
 void setLCDRed(QLCDNumber* pLCD) {
     QPalette lcdRed;
     lcdRed.setColor(QPalette::WindowText, Qt::red);
     pLCD->setPalette(lcdRed);
 }
+
+/// show blob image in label trace_image_1
+void showBlobs(Ui::MainWindow* uimain, const QSize& imgSize) {
+    QPixmap blobImage = getCurrBlobImage(imgSize);
+    uimain->trace_image_1->setPixmap(blobImage);
+}
+
+// TODO implement iteration through widget list
+void showTracks() {}
