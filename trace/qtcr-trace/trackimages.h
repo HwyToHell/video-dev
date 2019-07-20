@@ -6,7 +6,12 @@
 #include <QSize>
 #include <QString>
 
-#include "D:/Holger/app-dev/video-dev/car-count/include/tracker.h"
+#if defined(__linux__)
+    #include "../../car-count/include/tracker.h"
+#elif(_WIN32)
+    #include "D:/Holger/app-dev/video-dev/car-count/include/tracker.h"
+#endif
+
 
 
 QImage cvMatToQImage(const cv::Mat& inMat);

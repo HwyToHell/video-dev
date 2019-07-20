@@ -10,7 +10,7 @@
 using namespace std;
 
 // status variables for visual tracking
-extern TrackStateVec g_trackState;
+extern VecTrackStateList g_trackState;
 extern size_t g_idx;
 
 double euclideanDist(const cv::Point& pt1, const cv::Point& pt2) {

@@ -8,18 +8,25 @@
 #include <QVariant>
 
 #include "trackimages.h"
-#include "D:/Holger/app-dev/video-dev/utilities/inc/util-visual-trace.h"
+#if defined(__linux__)
+    #include "../../utilities/inc/util-visual-trace.h"
+#elif(_WIN32)
+    #include "D:/Holger/app-dev/video-dev/utilities/inc/util-visual-trace.h"
+#endif
 
 
 long extractNumber(const QString& fileName, const QString& prefix);
 
 QMap<int, QString> populateFileMap(const QString& workDir);
 
+void setTraceLayout(QGridLayout* grid, QList<TraceLabels>& traceLabelList,
+               const MapTrackStateList& trackStateMap);
+
 void setLCDRed(QLCDNumber* pLCD);
 
 void showBlobs(Ui::MainWindow* uimain, const QSize& imgSize);
 
-void showTracks();
+bool showTracks(Ui::MainWindow* uimain, const QSize& imgSize);
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -92,27 +99,33 @@ void MainWindow::on_actionApply_Tracking_Algorithm_triggered()
         ui->previous->setEnabled(true);
 
         ui->trace_desc_1->setText(QString("Blobs"));
-        showBlobs(ui, m_imgSize);
+
 
         // add widgets depending on lenght of TrackState list
+        /*
         for (auto trackState: g_trackStateMap.begin()->second) {
-            TraceVisu traceVisu;
+            TraceLabels traceLabels;
 
             // create description label
             QString labelText(QString::fromStdString(trackState.m_name));
             qDebug() << labelText;
-            traceVisu.description = new QLabel(labelText);
+            traceLabels.description = new QLabel(labelText);
 
             // create picture label
-            traceVisu.picture = new QLabel();
-            traceVisu.picture->setPixmap(getTrackImage(trackState, m_imgSize));
+            traceLabels.picture = new QLabel();
+            traceLabels.picture->setPixmap(getTrackImage(trackState, m_imgSize));
 
             // save label pointers and add widgets
-            m_traceVisu.push_back(traceVisu);
+            m_traceVisu.push_back(traceLabels);
             int column = m_traceVisu.size();
-            ui->gridLayout_5->addWidget(traceVisu.description, 0, column);
-            ui->gridLayout_5->addWidget(traceVisu.picture, 1, column);
-        }
+            ui->gridLayout_5->addWidget(traceLabels.description, 0, column);
+            ui->gridLayout_5->addWidget(traceLabels.picture, 1, column);
+        }*/
+        setTraceLayout(ui->gridLayout_5, m_traceLabelList, g_trackStateMap);
+
+        // show blob image in label trace_image_1
+        showBlobs(ui, m_imgSize);
+        showTracks(ui, m_imgSize);
 
     } else {
         ui->statusBar->showMessage("no segmentation results in working directory");
@@ -147,6 +160,7 @@ void MainWindow::on_next_clicked()
 
     // show blob image in label trace_image_1
     showBlobs(ui, m_imgSize);
+    showTracks(ui, m_imgSize);
 
 
     // TODO: use for dynamically added widgets
@@ -173,6 +187,7 @@ void MainWindow::on_previous_clicked()
     ui->idx_actual->display(idx);
 
     showBlobs(ui, m_imgSize);
+    showTracks(ui, m_imgSize);
 
     // TODO: use for dynamically added widgets
     //QList<QPixmap> imgList = getCurrImgList(m_imgSize);
@@ -232,12 +247,65 @@ QMap<int, QString> populateFileMap(const QString& workDir) {
     QDirIterator itDir(workDir);
     while(itDir.hasNext()) {
         itDir.next();
-        long idx = extractNumber(itDir.fileName(), QString("debug"));
+        int idx = static_cast<int>(extractNumber(itDir.fileName(), QString("debug")));
         if (idx > 0) {
             fileMap.insert(idx, itDir.fileName());
         }
     }
     return fileMap;
+}
+
+void setTraceLayout(QGridLayout* grid, QList<TraceLabels>& traceLabelList,
+               const MapTrackStateList& mapTrackStateList) {
+    // column 0      : blobs
+    // column 1 ... n: tracks
+
+    // add / remove labels depepending on track state list length
+    int nStatesNew = static_cast<int>(mapTrackStateList.begin()->second.size());
+    int nStatesOld = traceLabelList.size();
+    qDebug() << "new:" << nStatesNew;
+    qDebug() << "old:" << nStatesOld;
+
+    if (nStatesNew !=nStatesOld) {
+
+        // add labels
+        if (nStatesNew > nStatesOld) {
+        qDebug() << "add";
+            for (int state = nStatesOld; state < nStatesNew; ++state) {
+                TraceLabels labels;
+                qDebug() << "col:" << state;
+                labels.description = new QLabel();
+                labels.picture = new QLabel();
+                grid->addWidget(labels.description, 0, state+1);
+                grid->addWidget(labels.picture, 1, state+1);
+                traceLabelList.append(labels);
+            }
+
+        // remove labels
+        } else {
+        qDebug() << "remove";
+            for (int state = nStatesOld; state > nStatesNew; --state) {
+                TraceLabels labels = traceLabelList.last();
+                qDebug() << "col:" << state;
+                // remove widget and delete pointer to it afterwards
+                // https://stackoverflow.com/questions/11599273/qt-removewidget-and-object-deletion
+                grid->removeWidget(labels.description);
+                grid->removeWidget(labels.picture);
+                delete labels.description;
+                delete labels.picture;
+                traceLabelList.removeLast();
+            }
+        }
+    }
+
+    // set trace visu description
+    int column = 1;
+    for (auto trackState : mapTrackStateList.begin()->second) {
+        // iterate over labels in gridLayout and set label text
+        QWidget* label = grid->itemAtPosition(0, column)->widget();
+        static_cast<QLabel*>(label)->setText(QString::fromStdString(trackState.m_name));
+        ++column;
+    }
 }
 
 
@@ -247,11 +315,24 @@ void setLCDRed(QLCDNumber* pLCD) {
     pLCD->setPalette(lcdRed);
 }
 
-/// show blob image in label trace_image_1
+// show blob image in label trace_image_1
 void showBlobs(Ui::MainWindow* uimain, const QSize& imgSize) {
     QPixmap blobImage = getCurrBlobImage(imgSize);
     uimain->trace_image_1->setPixmap(blobImage);
 }
 
-// TODO implement iteration through widget list
-void showTracks() {}
+// show track images in label-columns 1 ...n, label-row 1
+bool showTracks(Ui::MainWindow* uimain, const QSize& imgSize) {
+    QList<QPixmap> trackImageList = getCurrImgList(imgSize);
+    // column 1 ... n: tracks
+    int column = 1;
+    // iterate over labels in gridLayout and set label pixmap
+    for (auto pixmap : trackImageList) {
+        QWidget* label = uimain->gridLayout_5->itemAtPosition(1, column)->widget();
+        if (label == nullptr)
+            return false;
+        static_cast<QLabel*>(label)->setPixmap(pixmap);
+        ++column;
+    }
+    return true;
+}

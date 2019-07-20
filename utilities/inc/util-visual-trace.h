@@ -22,8 +22,9 @@ enum Key {
 // TODO define as class with show function -> allows for template examineTimeSeries<T>
 typedef std::vector<std::list<cv::Rect>> BlobTimeSeries;
 typedef std::vector<std::list<Track>> TrackTimeSeries;
-typedef std::vector<std::list<TrackState>> TrackStateVec;
-typedef std::map<long long, std::list<TrackState>> TrackStateMap;
+typedef std::list<TrackState> TrackStateList;
+typedef std::vector<TrackStateList> VecTrackStateList;
+typedef std::map<long long, TrackStateList> MapTrackStateList;
 
 struct MovingBlob {
 	cv::Point	origin;
@@ -37,9 +38,9 @@ struct MovingBlob {
 //////////////////////////////////////////////////////////////////////////////
 // Global Vars ///////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-extern TrackStateVec g_trackState;
+extern VecTrackStateList g_trackState;
 extern size_t g_idx;
-extern TrackStateMap g_trackStateMap;
+extern MapTrackStateList g_trackStateMap;
 extern std::map<long long, std::list<TrackState>>::const_iterator g_itCurrent;
 
 
@@ -67,7 +68,7 @@ bool examineBlobTimeSeries(const BlobTimeSeries& blobTmSer, cv::Size roi);
 
 /// keyboard interface to move through recorded track states
 /// and visualize them in highgui windows with showTrackStateAt
-bool examineTrackState(const TrackStateVec trackState, cv::Size roi);
+bool examineTrackState(const VecTrackStateList trackState, cv::Size roi);
 
 /// move blobs through entire roi
 BlobTimeSeries moveBlobsThroughRoi(const cv::Size& roi, const MovingBlob& right, const MovingBlob& left);
@@ -132,4 +133,4 @@ bool showBlobsAt(const BlobTimeSeries& blobTmSer, cv::Size roi, size_t idxUnchec
 void showBlobAssignment(std::string winName, const Track& track, cv::Rect blob, cv::Size roi, size_t id = 0);
 
 /// at trace time step idx: show highgui windows for all recorded track states
-bool showTrackStateAt(const TrackStateVec& state, cv::Size roi, size_t idxUnchecked);
+bool showTrackStateAt(const VecTrackStateList& state, cv::Size roi, size_t idxUnchecked);

@@ -7,9 +7,16 @@
 #include <QDebug>
 #include <QList>
 
-#include "D:/Holger/app-dev/video-dev/car-count/include/config.h"
-#include "D:/Holger/app-dev/video-dev/car-count/include/frame_handler.h"
-#include "D:/Holger/app-dev/video-dev/utilities/inc/util-visual-trace.h"
+#if defined(__linux__)
+    #include "../../car-count/include/config.h"
+    #include "../../car-count/include/frame_handler.h"
+    #include "../../utilities/inc/util-visual-trace.h"
+#elif(_WIN32)
+    #include "D:/Holger/app-dev/video-dev/car-count/include/config.h"
+    #include "D:/Holger/app-dev/video-dev/car-count/include/frame_handler.h"
+    #include "D:/Holger/app-dev/video-dev/utilities/inc/util-visual-trace.h"
+#endif
+
 
 
 QImage cvMatToQImage(const cv::Mat& inMat) {
@@ -117,18 +124,6 @@ std::list<cv::Rect> motionRectsFromDebugImage(cv::Mat imageBGR, cv::Scalar color
 }
 
 
-QList<QPixmap> getCurrImgList(QSize dispImgSize) {
-    QList<QPixmap> imgList;
-    cv::Size dispSize(dispImgSize.width(), dispImgSize.height());
-    for (auto trackStateList: g_itCurrent->second) {
-        cv::Mat canvas(dispSize, CV_8UC3, black);
-        printTracksScaled(canvas, trackStateList.m_tracks, trackStateList.m_roi, true);
-        QPixmap pic = cvMatToQPixmap(canvas);
-        imgList.push_back(pic);
-    }
-    return imgList;
-}
-
 QPixmap getCurrBlobImage(QSize dispImgSize) {
     cv::Size dispSize(dispImgSize.width(), dispImgSize.height());
     cv::Mat canvas(dispSize, CV_8UC3, black);
@@ -139,6 +134,19 @@ QPixmap getCurrBlobImage(QSize dispImgSize) {
 
     QPixmap blobImage = cvMatToQPixmap(canvas);
     return blobImage;
+}
+
+
+QList<QPixmap> getCurrImgList(QSize dispImgSize) {
+    QList<QPixmap> imgList;
+    cv::Size dispSize(dispImgSize.width(), dispImgSize.height());
+    for (auto trackStateList: g_itCurrent->second) {
+        cv::Mat canvas(dispSize, CV_8UC3, black);
+        printTracksScaled(canvas, trackStateList.m_tracks, trackStateList.m_roi, true);
+        QPixmap pic = cvMatToQPixmap(canvas);
+        imgList.push_back(pic);
+    }
+    return imgList;
 }
 
 

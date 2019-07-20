@@ -1,18 +1,24 @@
-#include "../../video-dev/car-count/src/stdafx.h"
+#include "../../car-count/src/stdafx.h"
 
 #include "../../../cpp/inc/id_pool.h"
 #include "../../../cpp/inc/pick_list.h"
-#include "D:/Holger/app-dev/video-dev/car-count/include/frame_handler.h" // for color const
-#include "D:/Holger/app-dev/video-dev/car-count/include/tracker.h"
-#include "D:/Holger/app-dev/video-dev/utilities/inc/util-visual-trace.h"
+#if defined(__linux__)
+    #include "../../car-count/include/frame_handler.h" // for color const
+    #include "../../car-count/include/tracker.h"
+    #include "../../utilities/inc/util-visual-trace.h"
+#elif(_WIN32)
+    #include "D:/app-dev/video-dev/car-count/include/frame_handler.h" // for color const
+    #include "D:/Holger/app-dev/video-dev/car-count/include/tracker.h"
+    #include "D:/Holger/app-dev/video-dev/utilities/inc/util-visual-trace.h"
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 // Global Vars ///////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 // declared in util-visual-trace.h
-TrackStateVec g_trackState;
+VecTrackStateList g_trackState;
 size_t g_idx;
-TrackStateMap g_trackStateMap;
+MapTrackStateList g_trackStateMap;
 std::map<long long, std::list<TrackState>>::const_iterator g_itCurrent;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -158,7 +164,7 @@ bool examineBlobTimeSeries(const BlobTimeSeries& blobTmSer, cv::Size roi) {
 }
 
 
-bool examineTrackState(const TrackStateVec trackState, cv::Size roi) {
+bool examineTrackState(const VecTrackStateList trackState, cv::Size roi) {
 	using namespace std;
 
 	// validity check
@@ -683,7 +689,7 @@ void showTracks(std::string winName, const SceneTracker& scene) {
 }
 
 
-bool showTrackStateAt(const TrackStateVec& state, cv::Size roi, size_t idxUnchecked) {
+bool showTrackStateAt(const VecTrackStateList& state, cv::Size roi, size_t idxUnchecked) {
 	using namespace std;
 	// check upper index bound
 	size_t idx = (idxUnchecked >= state.size()) ? state.size()-1 : idxUnchecked;

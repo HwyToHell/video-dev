@@ -6,7 +6,7 @@ TEMPLATE = app
 DEFINES += QT_DEPRECATED_WARNINGS
 CONFIG += c++11
 
-win32: {
+windows {
 INCLUDEPATH += $$(BOOST)
 INCLUDEPATH += D:/opencv-3.4.0-mingw/include
 INCLUDEPATH += D:/Holger/app-dev/sqlite/inc
@@ -22,6 +22,18 @@ LIBS += -LD:/opencv-3.4.0-mingw/bin \
     -lopencv_video340 \
     -lopencv_videoio340
 LIBS += D:/Holger/app-dev/sqlite/bin/sqlite3.dll
+}
+
+linux {
+    LIBS += -lboost_filesystem \
+            -lboost_system
+    LIBS += -lopencv_core \
+            -lopencv_imgcodecs \
+            -lopencv_imgproc \
+            -lopencv_highgui \
+            -lopencv_video \
+            -lopencv_videoio
+    LIBS += -lsqlite3
 }
 
 SOURCES += \

@@ -5,13 +5,24 @@
 #include <QMap>
 #include <QtWidgets>
 
-#include "D:/Holger/app-dev/video-dev/car-count/include/config.h"
-#include "D:/Holger/app-dev/video-dev/car-count/include/tracker.h"
+#if defined(__linux__)
+    #include "../../car-count/include/config.h"
+    #include "../../car-count/include/tracker.h"
+#elif(_WIN32)
+    #include "D:/Holger/app-dev/video-dev/car-count/include/config.h"
+    #include "D:/Holger/app-dev/video-dev/car-count/include/tracker.h"
+#endif
+
 
 
 namespace Ui {
 class MainWindow;
 }
+
+struct TraceLabels{
+    QLabel* description;
+    QLabel* picture;
+};
 
 class MainWindow : public QMainWindow
 {
@@ -38,10 +49,6 @@ private slots:
     void on_previous_clicked();
 
 private:
-    struct TraceVisu{
-        QLabel* description;
-        QLabel* picture;
-    };
     Ui::MainWindow *ui;
     int m_idxActual;
     int m_idxBegin;
@@ -51,7 +58,7 @@ private:
     QMap<int, QString>::const_iterator m_itInputFile;
     QString m_settingsFile;
     QString m_workDir;
-    QList<TraceVisu> m_traceVisu;
+    QList<TraceLabels> m_traceLabelList;
     std::unique_ptr<Config> m_pConfig;
     std::unique_ptr<SceneTracker> m_pTracker;
 };
