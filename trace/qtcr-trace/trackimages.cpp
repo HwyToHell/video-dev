@@ -150,6 +150,27 @@ QList<QPixmap> getCurrImgList(QSize dispImgSize) {
 }
 
 
+QList<QString> getCurrTrackInfo() {
+    QList<QString> infoList;
+    // use last track state (after all assignments of SceneTracker::updateTracks
+    TrackState lastTrackState = g_itCurrent->second.back();
+    // iterate all tracks
+    for (auto track : lastTrackState.m_tracks) {
+        QString line;
+        line.append("#id: ");
+        line.append(QString::number(track.getId()));
+        line.append(", con: ");
+        line.append(QString::number(track.getConfidence()));
+        line.append(", len: ");
+        line.append(QString::number(static_cast<int>(track.getLength())));
+        line.append(", vel: ");
+        line.append(QString::number(track.getVelocity().x, 'f', 1));
+        infoList.append(line);
+    }
+    return infoList;
+}
+
+
 QPixmap getTrackImage(const TrackState& trackState, QSize dispImgSize) {
     cv::Size dispSize(dispImgSize.width(), dispImgSize.height());
     cv::Mat canvas(dispSize, CV_8UC3, black);
@@ -193,13 +214,8 @@ bool trackImages(const QString& directory, QMap<int, QString> imgFiles, SceneTra
     bool success = false;
 
     foreach(int iKey, imgFiles.keys()) {
-        // DEBUG show files
-        // qDebug() << iKey << "," << imgFiles.value(iKey);
-
         // read images to mat
         std::string fileName = directory.toStdString() + "/" + imgFiles.value(iKey).toStdString();
-        //cout << fileName << endl;
-
         cv::Mat image = cv::imread(fileName);
         if (!image.empty()){
             // apply segmentation
@@ -208,30 +224,19 @@ bool trackImages(const QString& directory, QMap<int, QString> imgFiles, SceneTra
             std::list<Track>* pDebugTracks;
             pDebugTracks = pScene->updateTracks(motionRectList, iKey);
             (void)pDebugTracks;
-
-            // DEBUG show tracks
-            /*
-            cv::Mat canvas(image.size(), CV_8UC3, black);
-            printTracks(canvas, *pDebugTracks);
-            cv::imshow("tracks", canvas);
-            if (cv::waitKey(0) == 27) {
-                std::cout << "ESC pressed -> end sequence" << std::endl;
-                break;
-            }
-            */
             success = true;
         } else {
             success = false;
             break;
         }
     }
-    // g_trackStateMap not empty
-    //qDebug( "track state size: %i", g_trackStateMap.size() );
+
+    // g_trackStateMap empty -> error msg
     if ( g_trackStateMap.size() == 0 ) {
         success = false;
         cerr << "track state empty" << endl;
+    // set first index as active
     } else {
-        // set first index as active
         g_itCurrent = g_trackStateMap.cbegin();
     }
     return success;

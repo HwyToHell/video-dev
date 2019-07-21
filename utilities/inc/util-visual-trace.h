@@ -41,7 +41,7 @@ struct MovingBlob {
 extern VecTrackStateList g_trackState;
 extern size_t g_idx;
 extern MapTrackStateList g_trackStateMap;
-extern std::map<long long, std::list<TrackState>>::const_iterator g_itCurrent;
+extern std::map<long long, TrackStateList>::const_iterator g_itCurrent;
 
 
 

@@ -18,13 +18,16 @@ QImage cvMatToQImage(const cv::Mat& inMat);
 
 QPixmap cvMatToQPixmap(const cv::Mat& inMat);
 
-// print blob image on pixmap
+/// print blob image on pixmap
 QPixmap getCurrBlobImage(QSize dispImgSize);
 
-// get list of track images
+/// get list of track images
 QList<QPixmap> getCurrImgList(QSize dispImgSize);
 
-// print track image on pixmap
+/// get track information (#id, confidence, ...) after all assignments of SceneTracker::updateTracks
+QList<QString> getCurrTrackInfo();
+
+/// print track image on pixmap
 QPixmap getTrackImage(const TrackState& trackState, QSize dispImgSize);
 
 QSize getRoiSize(QString fileName);

@@ -28,6 +28,7 @@ void showBlobs(Ui::MainWindow* uimain, const QSize& imgSize);
 
 bool showTracks(Ui::MainWindow* uimain, const QSize& imgSize);
 
+void showTrackInfo(Ui::MainWindow* uimain);
 
 //////////////////////////////////////////////////////////////////////////////
 // MainWindow ////////////////////////////////////////////////////////////////
@@ -89,44 +90,24 @@ void MainWindow::on_actionApply_Tracking_Algorithm_triggered()
     if ( !trackImages(m_workDir, inputFiles, m_pTracker.get()) )
         ui->statusBar->showMessage("error reading segmentation image");
 
-    // if no tracking results -> don't show keys
+    // enable keys only for valid if tracking results
     if (isTraceValid()) {
         ui->idx_begin->display(minIdxTrackState());
         ui->idx_end->display(maxIdxTrackState());
         ui->idx_actual->display(minIdxTrackState());
-
         ui->next->setEnabled(true);
         ui->previous->setEnabled(true);
 
+        // adjust trace layout to length of tracking result data
         ui->trace_desc_1->setText(QString("Blobs"));
-
-
-        // add widgets depending on lenght of TrackState list
-        /*
-        for (auto trackState: g_trackStateMap.begin()->second) {
-            TraceLabels traceLabels;
-
-            // create description label
-            QString labelText(QString::fromStdString(trackState.m_name));
-            qDebug() << labelText;
-            traceLabels.description = new QLabel(labelText);
-
-            // create picture label
-            traceLabels.picture = new QLabel();
-            traceLabels.picture->setPixmap(getTrackImage(trackState, m_imgSize));
-
-            // save label pointers and add widgets
-            m_traceVisu.push_back(traceLabels);
-            int column = m_traceVisu.size();
-            ui->gridLayout_5->addWidget(traceLabels.description, 0, column);
-            ui->gridLayout_5->addWidget(traceLabels.picture, 1, column);
-        }*/
         setTraceLayout(ui->gridLayout_5, m_traceLabelList, g_trackStateMap);
 
         // show blob image in label trace_image_1
         showBlobs(ui, m_imgSize);
         showTracks(ui, m_imgSize);
+        showTrackInfo(ui);
 
+    // no valid tracking results
     } else {
         ui->statusBar->showMessage("no segmentation results in working directory");
     }
@@ -147,7 +128,6 @@ void MainWindow::on_actionSelect_triggered()
     m_workDir = inputDir;
 
     ui->workdir_output->setText(m_workDir);
-
     readDirContents();
 }
 
@@ -161,22 +141,7 @@ void MainWindow::on_next_clicked()
     // show blob image in label trace_image_1
     showBlobs(ui, m_imgSize);
     showTracks(ui, m_imgSize);
-
-
-    // TODO: use for dynamically added widgets
-    //QList<QPixmap> imgList = getCurrImgList(m_imgSize);
-    //ui->trace_image_1->setPixmap(imgList.front());
-
-
-
-    // DEBUG show traversing over map
-    /*
-    if ( m_itInputFile == (m_inputFiles.cend()-1) )
-        m_itInputFile = m_inputFiles.cbegin();
-    else
-        ++m_itInputFile;
-    ui->idx_actual->display(m_itInputFile.key());
-    */
+    showTrackInfo(ui);
 }
 
 
@@ -188,19 +153,7 @@ void MainWindow::on_previous_clicked()
 
     showBlobs(ui, m_imgSize);
     showTracks(ui, m_imgSize);
-
-    // TODO: use for dynamically added widgets
-    //QList<QPixmap> imgList = getCurrImgList(m_imgSize);
-    //ui->trace_image_1->setPixmap(imgList.front());
-
-    // DEBUG show traversing over map
-    /*
-    if ( m_itInputFile == m_inputFiles.cbegin() )
-        m_itInputFile = (m_inputFiles.cend()-1);
-    else
-        --m_itInputFile;
-    ui->idx_actual->display(m_itInputFile.key());
-    */
+    showTrackInfo(ui);
 }
 
 
@@ -335,4 +288,16 @@ bool showTracks(Ui::MainWindow* uimain, const QSize& imgSize) {
         ++column;
     }
     return true;
+}
+
+void showTrackInfo(Ui::MainWindow* uimain) {
+    QList<QString> infoList = getCurrTrackInfo();
+    QString multiLine;
+    for (auto line : infoList) {
+        multiLine.append(line);
+        multiLine.append('\n');
+    }
+    int lastChar = multiLine.size() - 1;
+    multiLine.remove(lastChar, 1);
+    uimain->param_output->setText(multiLine);
 }
