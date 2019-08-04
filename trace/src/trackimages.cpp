@@ -1,4 +1,4 @@
-#include "trackimages.h"
+#include "../inc/trackimages.h"
 #include <cmath>
 #include <iostream>
 #include <list>
@@ -143,6 +143,7 @@ QList<QPixmap> getCurrImgList(QSize dispImgSize) {
     for (auto trackStateList: g_itCurrent->second) {
         cv::Mat canvas(dispSize, CV_8UC3, black);
         printTracksScaled(canvas, trackStateList.m_tracks, trackStateList.m_roi, true);
+        printOcclusionsScaled(canvas, trackStateList.m_occlusions, trackStateList.m_roi);
         QPixmap pic = cvMatToQPixmap(canvas);
         imgList.push_back(pic);
     }

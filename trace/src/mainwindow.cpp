@@ -1,4 +1,4 @@
-#include "mainwindow.h"
+#include "../inc/mainwindow.h"
 #include "ui_mainwindow.h"
 
 
@@ -7,7 +7,7 @@
 #include <QStandardPaths>
 #include <QVariant>
 
-#include "trackimages.h"
+#include "../inc/trackimages.h"
 #if defined(__linux__)
     #include "../../utilities/inc/util-visual-trace.h"
 #elif(_WIN32)

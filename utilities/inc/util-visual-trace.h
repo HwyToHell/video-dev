@@ -95,6 +95,10 @@ void printBlobsAt(cv::Mat& canvas, const BlobTimeSeries& timeSeries, const size_
 /// print list of blobs with scaling
 void printBlobsScaled(cv::Mat& canvas, const std::list<cv::Rect>& blobs, const cv::Size& roi);
 
+/// print track ids in scaled canvas, either at top or bottom
+void printIdsScaled(cv::Mat& canvas, const std::list<Track>& tracks, const cv::Size& roi,
+                    bool atBottom = false);
+
 /// print frame index in upper left corner of existing canvas
 void printIndex(cv::Mat& canvas, size_t index);
 
@@ -104,24 +108,27 @@ void printOcclusion(cv::Mat& canvas, const Occlusion& occlusion, cv::Scalar colo
 /// print list of occlusions
 void printOcclusions(cv::Mat& canvas, const std::list<Occlusion>& occlusions);
 
+/// print list of occlusions with scaling
+void printOcclusionsScaled(cv::Mat& canvas, const std::list<Occlusion>& occlusions, const cv::Size& roi);
+
 /// print single track on existing canvas
 void printTrack(cv::Mat& canvas, const Track& track, cv::Scalar color);
-
-/// print list of tracks
-void printTracks(cv::Mat& canvas, const std::list<Track>& tracks, bool withPrevious = false);
-
-/// print list of tracks with scaling
-void printTracksScaled(cv::Mat& canvas, const std::list<Track>& tracks,
-                       const cv::Size& dispSize, bool withPrevious = false);
-
-/// at trace time step idx: print list of tracks on canvas
-void printTracksAt(cv::Mat& canvas, const TrackTimeSeries& timeSeries, size_t idxUnchecked);
 
 /// print ID, confidence, lenght and velocity of list of tracks
 void printTrackInfo(cv::Mat& canvas, const std::list<Track>& tracks);
 
 /// at trace time step idx: print track info (ID, confidence, length, velocity) on canvas
 void printTrackInfoAt(cv::Mat& canvas, const TrackTimeSeries& timeSeries, size_t idxUnchecked);
+
+/// print list of tracks
+void printTracks(cv::Mat& canvas, const std::list<Track>& tracks, bool withPrevious = false);
+
+/// at trace time step idx: print list of tracks on canvas
+void printTracksAt(cv::Mat& canvas, const TrackTimeSeries& timeSeries, size_t idxUnchecked);
+
+/// print list of tracks with scaling
+void printTracksScaled(cv::Mat& canvas, const std::list<Track>& tracks, const cv::Size& roi,
+                       bool withPrevious = false);
 
 /// print help for stepping through time series with keys in highgui window 
 void printUsageHelp();

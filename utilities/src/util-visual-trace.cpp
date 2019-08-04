@@ -368,6 +368,39 @@ void printBlobsScaled(cv::Mat& canvas, const std::list<cv::Rect>& blobs, const c
 }
 
 
+void printIdsScaled(cv::Mat& canvas, const std::list<Track>& tracks, const cv::Size& roi,
+                    bool atBottom) {
+    // appearance fix
+    cv::Scalar color[] = {blue, green, red, yellow};
+    size_t nColors = sizeof(color) / sizeof(color[0]);
+    int font = cv::HersheyFonts::FONT_HERSHEY_SIMPLEX;
+    int baseLine = 0;
+
+    // appearance based on roi
+    double fontScale = static_cast<double>(roi.width) / 200.;
+    int fontHeight = cv::getTextSize("1", font, fontScale, Line::thin, &baseLine).height;
+    int xOffset = static_cast<int>(static_cast<double>(roi.width) * 0.05);
+    int yOffset = static_cast<int>(static_cast<double>(roi.height) * 0.05);
+    int yTextPos = yOffset + fontHeight; // at top
+    if (atBottom)
+        yTextPos = canvas.size().height - yOffset;
+
+    // collect ids in stringstream by looping through tracks
+    std::list<Track>::const_iterator iTrack = tracks.begin();
+    int xTextPos = xOffset;
+    while (iTrack != tracks.end()) {
+        size_t id = iTrack->getId();
+        std::stringstream ss;
+        ss << " #" << id;
+        cv::Size textSize = cv::getTextSize(ss.str(), font, fontScale, Line::thin, &baseLine);
+        cv::Point org(xTextPos, yTextPos);
+        cv::putText(canvas, ss.str(), org, font, fontScale, color[id % nColors]);
+        xTextPos += textSize.width;
+        ++iTrack;
+    }
+}
+
+
 void printIndex(cv::Mat& canvas, size_t index) {
 	int font = cv::HersheyFonts::FONT_HERSHEY_SIMPLEX;
 	double fontScale = 0.4;
@@ -382,9 +415,9 @@ void printIndex(cv::Mat& canvas, size_t index) {
 }
 
 
-void printOcclusion(cv::Mat& canvas, const Occlusion& occlusion, cv::Scalar color) {
+void printOcclusion(cv::Mat& canvas, const cv::Rect& rcOcc, cv::Scalar color) {
 	// make size one line larger for better visibiliy
-	cv::Rect rcPrint(occlusion.rect());
+    cv::Rect rcPrint(rcOcc);
 	rcPrint.height += 2;
 	rcPrint.width += 2;
 	rcPrint.x -= 1;
@@ -392,6 +425,7 @@ void printOcclusion(cv::Mat& canvas, const Occlusion& occlusion, cv::Scalar colo
 	cv::rectangle(canvas, rcPrint, color);
 	return;
 }
+
 
 void printOcclusions(cv::Mat& canvas, const std::list<Occlusion>& occlusions) {
 	// appearance
@@ -401,12 +435,33 @@ void printOcclusions(cv::Mat& canvas, const std::list<Occlusion>& occlusions) {
 	// loop through available occlusions
 	std::list<Occlusion>::const_iterator iOcc = occlusions.begin();
 	while (iOcc != occlusions.end()) {
-		printOcclusion(canvas, *iOcc, color[iOcc->id() % nColors]);
+        printOcclusion(canvas, iOcc->rect(), color[iOcc->id() % nColors]);
 		++iOcc;
 	}
 	return;
 }
 
+
+void printOcclusionsScaled(cv::Mat& canvas, const std::list<Occlusion>& occlusions,
+                           const cv::Size& roi) {
+    // appearance
+    cv::Scalar color[] = {magenta, magenta_dark, purple};
+    size_t nColors = sizeof(color) / sizeof(color[0]);
+
+    // scaling factors from display size
+    double scaleX = static_cast<double>(canvas.size().width) / static_cast<double>(roi.width);
+    double scaleY = static_cast<double>(canvas.size().height) / static_cast<double>(roi.height);
+
+    // loop through available occlusions
+    std::list<Occlusion>::const_iterator iOcc = occlusions.begin();
+    while (iOcc != occlusions.end()) {
+        // scale occlusion
+        cv::Rect rcActual = scaleRect(iOcc->rect(), scaleX, scaleY);
+        printOcclusion(canvas, rcActual, color[iOcc->id() % nColors]);
+        ++iOcc;
+    }
+    return;
+}
 
 void printTrack(cv::Mat& canvas, const Track& track, cv::Scalar color) {
 	cv::Rect rcActual = track.getActualEntry().rect();
@@ -414,6 +469,116 @@ void printTrack(cv::Mat& canvas, const Track& track, cv::Scalar color) {
 	cv::rectangle(canvas, rcActual, color, Line::thick);
 	cv::rectangle(canvas, rcPrev, color, Line::thin);
 	return;
+}
+
+
+void printTrackInfo(cv::Mat& canvas, const std::list<Track>& tracks) {
+    // appearance
+    cv::Scalar color[] = {blue, green, red, yellow};
+    size_t nColors = sizeof(color) / sizeof(color[0]);
+    int idxLine = 0;
+
+    std::list<Track>::const_iterator iTrack = tracks.begin();
+    while (iTrack != tracks.end()) {
+
+        // collect track info
+        int confidence = iTrack->getConfidence();
+        size_t id = iTrack->getId();
+        int length = static_cast<int>(iTrack->getLength());
+        double velocity = iTrack->getVelocity().x;
+
+        // print track info
+        std::stringstream ss;
+        ss << "#" << id << ", con=" << confidence << ", len=" << length << ", v="
+            << std::fixed << std::setprecision(1) << velocity;
+
+        // split status line, if necessary
+        int xOffset = 5;
+        int font = cv::HersheyFonts::FONT_HERSHEY_SIMPLEX;
+        double fontScale = 0.4;
+        int baseline = 0;
+        cv::Size textSize = cv::getTextSize(ss.str(), font, fontScale, 1, &baseline);
+
+        // fits onto one line
+        if (textSize.width + (xOffset * 2) < canvas.size().width) {
+            int yOffset = 10 + idxLine * 10;
+            cv::putText(canvas, ss.str(), cv::Point(xOffset, yOffset),
+                font, fontScale, color[id % nColors]);
+
+        // needs two lines
+        } else {
+            size_t pos = std::string::npos;
+            pos = ss.str().find(", len=");
+            std::string line1 = ss.str().substr(0, pos);
+            std::string line2 = ss.str().substr(pos + 2);
+            int yOffset = 10 + idxLine * 20;
+            cv::putText(canvas, line1, cv::Point(xOffset, yOffset),
+                font, fontScale, color[id % nColors]);
+            cv::putText(canvas, line2, cv::Point(xOffset, yOffset + 10),
+                font, fontScale, color[id % nColors]);
+        }
+        ++idxLine;
+        ++iTrack;
+    } // end_while
+
+    return;
+}
+
+
+void printTrackInfoAt(cv::Mat& canvas, const TrackTimeSeries& timeSeries, size_t idxUnchecked) {
+    // appearance
+    cv::Scalar color[] = {blue, green, red, yellow};
+    size_t nColors = sizeof(color) / sizeof(color[0]);
+    int idxLine = 0;
+
+
+    // check upper index bound
+    size_t idx = (idxUnchecked >= timeSeries.size()) ? timeSeries.size()-1 : idxUnchecked;
+
+    std::list<Track>::const_iterator iTrack = timeSeries[idx].begin();
+    while (iTrack != timeSeries[idx].end()) {
+
+        // collect track info
+        int confidence = iTrack->getConfidence();
+        size_t id = static_cast<size_t>(iTrack->getId());
+        int length = static_cast<int>(iTrack->getLength());
+        double velocity = iTrack->getVelocity().x;
+
+        // print track info
+        std::stringstream ss;
+        ss << "#" << id << ", con=" << confidence << ", len=" << length << ", v="
+            << std::fixed << std::setprecision(1) << velocity;
+
+        // split status line, if necessary
+        int xOffset = 5;
+        int font = cv::HersheyFonts::FONT_HERSHEY_SIMPLEX;
+        double fontScale = 0.4;
+        int baseline = 0;
+        cv::Size textSize = cv::getTextSize(ss.str(), font, fontScale, 1, &baseline);
+
+        // fits onto one line
+        if (textSize.width + (xOffset * 2) < canvas.size().width) {
+            int yOffset = 10 + idxLine * 10;
+            cv::putText(canvas, ss.str(), cv::Point(xOffset, yOffset),
+                font, fontScale, color[id % nColors]);
+
+        // needs two lines
+        } else {
+            size_t pos = std::string::npos;
+            pos = ss.str().find(", len=");
+            std::string line1 = ss.str().substr(0, pos);
+            std::string line2 = ss.str().substr(pos + 2);
+            int yOffset = 10 + idxLine * 20;
+            cv::putText(canvas, line1, cv::Point(xOffset, yOffset),
+                font, fontScale, color[id % nColors]);
+            cv::putText(canvas, line2, cv::Point(xOffset, yOffset + 10),
+                font, fontScale, color[id % nColors]);
+        }
+        ++idxLine;
+        ++iTrack;
+    } // end_while
+
+    return;
 }
 
 
@@ -441,7 +606,32 @@ void printTracks(cv::Mat& canvas, const std::list<Track>& tracks, bool withPrevi
 }
 
 
-void printTracksScaled(cv::Mat& canvas, const std::list<Track>& tracks, const cv::Size& roi, bool withPrevious) {
+void printTracksAt(cv::Mat& canvas, const TrackTimeSeries& timeSeries, size_t idxUnchecked) {
+    // appearance
+    cv::Scalar color[] = {blue, green, red, yellow};
+    size_t nColors = sizeof(color) / sizeof(color[0]);
+
+    // check upper index bound
+    size_t idx = (idxUnchecked >= timeSeries.size()) ? timeSeries.size()-1 : idxUnchecked;
+
+    // loop through available tracks
+    std::list<Track>::const_iterator iTrack = timeSeries[idx].begin();
+    while (iTrack != timeSeries[idx].end()) {
+        cv::Rect rcActual = iTrack->getActualEntry().rect();
+        cv::Rect rcPrev = iTrack->getPreviousEntry().rect();
+
+        size_t id = iTrack->getId();
+        cv::rectangle(canvas, rcActual, color[id % nColors], Line::thick);
+        cv::rectangle(canvas, rcPrev, color[id % nColors], Line::thin);
+        ++iTrack;
+    }
+
+    return;
+}
+
+
+void printTracksScaled(cv::Mat& canvas, const std::list<Track>& tracks, const cv::Size& roi,
+                       bool withPrevious) {
     // appearance
     cv::Scalar color[] = {blue, green, red, yellow};
     size_t nColors = sizeof(color) / sizeof(color[0]);
@@ -466,140 +656,6 @@ void printTracksScaled(cv::Mat& canvas, const std::list<Track>& tracks, const cv
     }
 
     return;
-}
-
-
-void printTracksAt(cv::Mat& canvas, const TrackTimeSeries& timeSeries, size_t idxUnchecked) {
-	// appearance
-	cv::Scalar color[] = {blue, green, red, yellow};
-	size_t nColors = sizeof(color) / sizeof(color[0]);
-
-	// check upper index bound
-	size_t idx = (idxUnchecked >= timeSeries.size()) ? timeSeries.size()-1 : idxUnchecked;
-
-	// loop through available tracks
-	std::list<Track>::const_iterator iTrack = timeSeries[idx].begin();
-	while (iTrack != timeSeries[idx].end()) {
-		cv::Rect rcActual = iTrack->getActualEntry().rect();
-		cv::Rect rcPrev = iTrack->getPreviousEntry().rect();
-
-        size_t id = iTrack->getId();
-		cv::rectangle(canvas, rcActual, color[id % nColors], Line::thick);
-		cv::rectangle(canvas, rcPrev, color[id % nColors], Line::thin);
-		++iTrack;
-	}
-
-	return;
-}
-
-
-void printTrackInfo(cv::Mat& canvas, const std::list<Track>& tracks) {
-	// appearance
-	cv::Scalar color[] = {blue, green, red, yellow};
-	size_t nColors = sizeof(color) / sizeof(color[0]);	
-	int idxLine = 0;
-
-	std::list<Track>::const_iterator iTrack = tracks.begin();
-	while (iTrack != tracks.end()) {
-
-		// collect track info
-		int confidence = iTrack->getConfidence();
-        size_t id = iTrack->getId();
-		int length = static_cast<int>(iTrack->getLength());
-		double velocity = iTrack->getVelocity().x;
-
-		// print track info
-		std::stringstream ss;
-		ss << "#" << id << ", con=" << confidence << ", len=" << length << ", v=" 
-			<< std::fixed << std::setprecision(1) << velocity;
-
-		// split status line, if necessary
-		int xOffset = 5;
-		int font = cv::HersheyFonts::FONT_HERSHEY_SIMPLEX;
-		double fontScale = 0.4;
-		int baseline = 0;
-		cv::Size textSize = cv::getTextSize(ss.str(), font, fontScale, 1, &baseline);
-
-		// fits onto one line 
-		if (textSize.width + (xOffset * 2) < canvas.size().width) {
-			int yOffset = 10 + idxLine * 10;
-			cv::putText(canvas, ss.str(), cv::Point(xOffset, yOffset),
-				font, fontScale, color[id % nColors]);
-
-		// needs two lines
-		} else {
-			size_t pos = std::string::npos;
-			pos = ss.str().find(", len=");
-			std::string line1 = ss.str().substr(0, pos);
-			std::string line2 = ss.str().substr(pos + 2);
-			int yOffset = 10 + idxLine * 20;
-			cv::putText(canvas, line1, cv::Point(xOffset, yOffset),
-				font, fontScale, color[id % nColors]);
-			cv::putText(canvas, line2, cv::Point(xOffset, yOffset + 10),
-				font, fontScale, color[id % nColors]);
-		}
-		++idxLine;
-		++iTrack;
-	} // end_while
-
-	return;
-}
-
-
-void printTrackInfoAt(cv::Mat& canvas, const TrackTimeSeries& timeSeries, size_t idxUnchecked) {
-	// appearance
-	cv::Scalar color[] = {blue, green, red, yellow};
-	size_t nColors = sizeof(color) / sizeof(color[0]);	
-	int idxLine = 0;
-
-
-	// check upper index bound
-	size_t idx = (idxUnchecked >= timeSeries.size()) ? timeSeries.size()-1 : idxUnchecked;
-
-	std::list<Track>::const_iterator iTrack = timeSeries[idx].begin();
-	while (iTrack != timeSeries[idx].end()) {
-
-		// collect track info
-		int confidence = iTrack->getConfidence();
-        size_t id = static_cast<size_t>(iTrack->getId());
-		int length = static_cast<int>(iTrack->getLength());
-		double velocity = iTrack->getVelocity().x;
-
-		// print track info
-		std::stringstream ss;
-		ss << "#" << id << ", con=" << confidence << ", len=" << length << ", v=" 
-			<< std::fixed << std::setprecision(1) << velocity;
-
-		// split status line, if necessary
-		int xOffset = 5;
-		int font = cv::HersheyFonts::FONT_HERSHEY_SIMPLEX;
-		double fontScale = 0.4;
-		int baseline = 0;
-		cv::Size textSize = cv::getTextSize(ss.str(), font, fontScale, 1, &baseline);
-
-		// fits onto one line 
-		if (textSize.width + (xOffset * 2) < canvas.size().width) {
-			int yOffset = 10 + idxLine * 10;
-			cv::putText(canvas, ss.str(), cv::Point(xOffset, yOffset),
-				font, fontScale, color[id % nColors]);
-
-		// needs two lines
-		} else {
-			size_t pos = std::string::npos;
-			pos = ss.str().find(", len=");
-			std::string line1 = ss.str().substr(0, pos);
-			std::string line2 = ss.str().substr(pos + 2);
-			int yOffset = 10 + idxLine * 20;
-			cv::putText(canvas, line1, cv::Point(xOffset, yOffset),
-				font, fontScale, color[id % nColors]);
-			cv::putText(canvas, line2, cv::Point(xOffset, yOffset + 10),
-				font, fontScale, color[id % nColors]);
-		}
-		++idxLine;
-		++iTrack;
-	} // end_while
-
-	return;
 }
 
 
