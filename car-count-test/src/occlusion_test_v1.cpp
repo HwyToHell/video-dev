@@ -2,7 +2,13 @@
 #include "../../car-count/include/config.h" // includes tracker.h
 #include "../../car-count/include/tracker.h"
 #include "../../car-count/include/frame_handler.h"
-#include "D:/Holger/app-dev/video-dev/utilities/inc/util-visual-trace.h"
+
+#if defined(__linux__)
+    #include "../../utilities/inc/util-visual-trace.h"
+#elif(_WIN32)
+    #include "D:/Holger/app-dev/video-dev/utilities/inc/util-visual-trace.h"    #pragma warning(disable: 4482) // MSVC10: enum nonstd extension
+#endif
+
 
 // enable visual trace
 static bool g_traceOcclusion = false; // static == internal linkage (file)
@@ -130,7 +136,7 @@ TEST_CASE("#occ003 assignBlobs", "[Occlusion]") {
 		cv::Mat canvas(roi, CV_8UC3, black);
 		printTrack(canvas, trackRight, green);
 		printTrack(canvas, trackLeft, yellow);
-		printOcclusion(canvas, occ, magenta);
+        printOcclusion(canvas, occ.rect(), magenta);
 		cv::imshow("tracks", canvas);
 		breakEscContinueEnter();
 	}
@@ -269,7 +275,7 @@ TEST_CASE("#occ006 hasPassed", "[Occlusion]") {
 				cv::Mat canvas(roi, CV_8UC3, black);
 				printTrack(canvas, trackRight, green);
 				printTrack(canvas, trackLeft, yellow);
-				printOcclusion(canvas, occ, magenta);
+                printOcclusion(canvas, occ.rect(), magenta);
 				cv::imshow("tracks", canvas);
 				breakEscContinueEnter();
 			}

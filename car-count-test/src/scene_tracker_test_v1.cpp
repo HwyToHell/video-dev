@@ -1,7 +1,14 @@
 #include "stdafx.h"
 #include "../../car-count/include/config.h" // includes tracker.h
 #include "../../car-count/include/frame_handler.h"
-#include "D:/Holger/app-dev/video-dev/utilities/inc/util-visual-trace.h"
+
+#if defined(__linux__)
+    #include "../../utilities/inc/util-visual-trace.h"
+#elif(_WIN32)
+    #include "D:/Holger/app-dev/video-dev/utilities/inc/util-visual-trace.h"    #pragma warning(disable: 4482) // MSVC10: enum nonstd extension
+#endif
+
+
 
 // enable visual trace
 static bool g_traceScene = false;
@@ -660,7 +667,7 @@ TEST_CASE("#sce015 updateTracks", "[Scene]") {
 		cv::Mat canvas(roi, CV_8UC3, black);
 		printTrack(canvas, tracks.right, green);
 		printTrack(canvas, tracks.left, yellow);
-		//printOcclusion(canvas, occ, magenta);
+        //printOcclusion(canvas, occ, magenta);
 		printBlobs(canvas, blobs);
 		cv::imshow("tracks", canvas);
 		breakEscContinueEnter();
@@ -719,7 +726,7 @@ TEST_CASE("#sce015 updateTracks", "[Scene]") {
 					cv::Mat canvas(roi, CV_8UC3, black);
 					printTrack(canvas, *(occlusions->front().movingRight()), green);
 					printTrack(canvas, *(occlusions->front().movingLeft()), yellow);
-					printOcclusion(canvas, occlusions->front(), magenta);
+                    printOcclusion(canvas, occlusions->front().rect(), magenta);
 					printBlobs(canvas, blobs);
 					cv::imshow("sce#015 tracks", canvas);
 					breakEscContinueEnter();

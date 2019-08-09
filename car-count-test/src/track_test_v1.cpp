@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "D:/Holger/app-dev/video-dev/car-count/include/config.h" // includes tracker.h
+#include "../../car-count/include/config.h" // includes tracker.h
 
 ///////////////////////////////////////////////////////////////////////////////
 // Track 

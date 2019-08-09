@@ -5,8 +5,8 @@
 #include <string>
 
 #include <opencv2/opencv.hpp>
-#include "../../cpp/inc/pick_list.h"
-#include "../../video-dev/car-count/include/tracker.h"
+#include "../../../cpp/inc/pick_list.h"
+#include "../../../video-dev/car-count/include/tracker.h"
 
 Track createTrackAt(cv::Size roi, cv::Point blobPos, cv::Size blobSize, cv::Point velocity, size_t id);
 Occlusion createOcclusionAt(Track& trackRight, Track& trackLeft,
@@ -40,7 +40,8 @@ int main(int argc, char* argv[]){
 	return 0;
 	*/
 	int result = Catch::Session().run(ac, av);
-	//int result = Catch::Session().run(argc, argv);
+    //int result = Catch::Session().run(argc, argv);
+    (void)argc;
 
 	
 	cout << "Press <enter> to continue" << endl;

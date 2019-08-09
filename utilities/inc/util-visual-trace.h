@@ -103,7 +103,7 @@ void printIdsScaled(cv::Mat& canvas, const std::list<Track>& tracks, const cv::S
 void printIndex(cv::Mat& canvas, size_t index);
 
 /// print single occlusion rect on existing canvas
-void printOcclusion(cv::Mat& canvas, const Occlusion& occlusion, cv::Scalar color);
+void printOcclusion(cv::Mat& canvas, const cv::Rect& rcOcc, cv::Scalar color);
 
 /// print list of occlusions
 void printOcclusions(cv::Mat& canvas, const std::list<Occlusion>& occlusions);
