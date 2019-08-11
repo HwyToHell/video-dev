@@ -84,6 +84,32 @@ TEST_CASE("#sce001 getTrackID, returnTrackID", "[Scene]") {
 }
 
 
+TEST_CASE("#sce015 unique TrackID", "[Scene]") {
+    // scene with no tracks, force unique track IDs
+    using namespace std;
+    Config config;
+    Config* pConfig = &config;
+    SceneTracker scene(pConfig, true);
+
+    SECTION("get 10 new TrackIDs") {
+        for (int i = 0; i < 9; ++i)
+            scene.nextTrackID();
+        REQUIRE(scene.nextTrackID() == 10);
+
+        SECTION("trackID returned -> always true") {
+            for (size_t n = 1; n < 10; ++n) {
+                REQUIRE(scene.returnTrackID(n));
+                //cout << "returned id[" << i << "]: " << i << endl;
+            }
+
+            SECTION("next trackID -> 11") {
+                REQUIRE(scene.nextTrackID() == 11);
+            }
+        }
+    }
+}
+
+
 
 //////////////////////////////////////////////////////////////////////////////
 // Scene - update logic (assgin, combine, delete tracks)

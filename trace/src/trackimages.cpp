@@ -142,6 +142,7 @@ QList<QPixmap> getCurrImgList(QSize dispImgSize) {
     cv::Size dispSize(dispImgSize.width(), dispImgSize.height());
     for (auto trackStateList: g_itCurrent->second) {
         cv::Mat canvas(dispSize, CV_8UC3, black);
+        printIdsScaled(canvas, trackStateList.m_tracks, trackStateList.m_roi, true);
         printTracksScaled(canvas, trackStateList.m_tracks, trackStateList.m_roi, true);
         printOcclusionsScaled(canvas, trackStateList.m_occlusions, trackStateList.m_roi);
         QPixmap pic = cvMatToQPixmap(canvas);

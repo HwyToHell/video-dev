@@ -6,6 +6,8 @@
 #include "../include/frame_handler.h"
 #include "../include/tracker.h"
 #include "../../utilities/inc/util-visual-trace.h"
+#include "../../trace/inc/sql_trace.h"
+
 
 using namespace std;
 
@@ -744,14 +746,18 @@ bool Track::updateTrackPassedOcclusion(std::list<cv::Rect>& blobs, cv::Size roi,
 // SceneTracker //////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-SceneTracker::SceneTracker(Config* pConfig) : 
-	Observer(pConfig),
+SceneTracker::SceneTracker(Config* pConfig, bool hasUniqueIDs) :
+    Observer(pConfig),
+    m_hasUniqueTrackIDs(hasUniqueIDs),
 	m_occlusions(6) {
-	// max number of tracks assignable (9)
-    m_maxNoIDs = stoul(mSubject->getParam("max_n_of_tracks"));
-    for (size_t n = m_maxNoIDs; n > 0; --n) { // fill trackIDs with 9 ints
-        m_trackIDs.push_back(n);
+    if (!hasUniqueIDs) {
+        // max number of tracks assignable (9)
+        m_maxNoIDs = static_cast<unsigned int>(stoul(mSubject->getParam("max_n_of_tracks")));
+        for (size_t n = m_maxNoIDs; n > 0; --n) { // fill trackIDs with 9 ints
+            m_trackIDs.push_back(n);
+        }
     }
+
 	// update all other relevant parameters from Config
 	update();
 }
@@ -1017,27 +1023,41 @@ bool SceneTracker::isOverlappingTracks() {
 
 size_t SceneTracker::nextTrackID()
 {
-	if (m_trackIDs.empty()) return 0;
-	else {
-        size_t id = m_trackIDs.back();
-		m_trackIDs.pop_back();
-		return id;
-	}
+    // unique ID for each new track
+    if (m_hasUniqueTrackIDs) {
+        return m_uniqueTrackID.allocID();
+
+    // ID from pool
+    } else {
+        if (m_trackIDs.empty()) return 0;
+        else {
+            size_t id = m_trackIDs.back();
+            m_trackIDs.pop_back();
+            return id;
+        }
+    }
 }
 
 
 bool SceneTracker::returnTrackID(size_t id)
 {
-	if (id > 0 ) {
-		if (m_trackIDs.size() < m_maxNoIDs) {
-			m_trackIDs.push_back(id);
-			return true;
-		}
-		else
-			return false;
-	}
-	else
-		return false;
+    // unique ID -> do nothing
+    if (m_hasUniqueTrackIDs) {
+        return true;
+
+    // ID from pool -> free ID and return it to pool
+    } else {
+        if (id > 0 ) {
+            if (m_trackIDs.size() < m_maxNoIDs) {
+                m_trackIDs.push_back(id);
+                return true;
+            }
+            else
+                return false;
+        }
+        else
+            return false;
+    }
 }
 
 
@@ -1130,7 +1150,7 @@ void printIsOccluded(Track& track) {
 	return;
 }
 
-std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs, long long frameCnt) {
+std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs, long long frameCnt, SqlTrace* sqlTrace) {
     (void)frameCnt;
 	// DEBUG
 	using namespace std;
@@ -1190,6 +1210,9 @@ std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs, long lo
 	// DEBUG
 	g_trackState.push_back(traceTrackState);	
     g_trackStateMap.insert(std::pair<long long, std::list<TrackState>>(frameCnt, traceTrackState));
+
+    // sql trace
+    sqlTrace->insertTrackState(frameCnt, &m_tracks);
     return &m_tracks;
 }
 

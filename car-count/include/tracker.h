@@ -17,6 +17,7 @@
 
 // forward decls
 class Config;
+class SqlTrace;
 class Track;
 
 
@@ -216,7 +217,7 @@ class SceneTracker : public Observer {
 public:
 	/// construct tracker
 	/// \param[in] pConfig pointer to configuration object, containing changeable parameters
-	SceneTracker(Config* pConfig);
+    SceneTracker(Config* pConfig, bool hasUniqueIDs = false);
 
 	/// assigns blobs to existing tracks with overlapping area,
 	/// creates new tracks for non-matching blobs
@@ -270,14 +271,16 @@ public:
 
 	/// updates tracks with new motion objects (new intersection method)
 	/// returns pointer to updated track list
-    std::list<Track>* updateTracks(std::list<cv::Rect>& blobs, long long frameCnt = 0);
+    std::list<Track>* updateTracks(std::list<cv::Rect>& blobs, long long frameCnt = 0,
+                                   SqlTrace* sqlTrace = nullptr);
 
 	// DEBUG
 	void inspect(int frameCnt);
 	// END DEBUG
 private:
-	// changeable parameters (at run-time)
+    // changeable parameters (at run-time)
 	ClassifyVehicle		m_classify;
+    bool                m_hasUniqueTrackIDs;
 	cv::Size			m_roiSize;
 	int					m_maxConfidence;
 	double				m_maxDeviation;
@@ -289,6 +292,7 @@ private:
 	OcclusionIdList		m_occlusions;
 	std::list<Track>	m_tracks;
     std::list<size_t>   m_trackIDs;
+    IdUnique            m_uniqueTrackID;
 };
 
 

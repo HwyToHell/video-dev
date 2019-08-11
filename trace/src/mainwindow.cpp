@@ -52,9 +52,9 @@ MainWindow::MainWindow(QWidget *parent) :
     loadSettings();
     readDirContents();
 
-    // init tracker
+    // init tracker (has unique track IDs == true)
     m_pConfig = std::unique_ptr<Config>(new Config);
-    m_pTracker = std::unique_ptr<SceneTracker>(new SceneTracker(m_pConfig.get()));
+    m_pTracker = std::unique_ptr<SceneTracker>(new SceneTracker(m_pConfig.get(), true));
 }
 
 

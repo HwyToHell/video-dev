@@ -1,59 +1,61 @@
 TEMPLATE = app
-CONFIG += console
-CONFIG -= app_bundle
-CONFIG -= qt
-QMAKE_CXXFLAGS += -std=c++11
-#unix: CONFIG += link_pkgconfig
-#unix: PKGCONFIG += opencv
-unix: CONFIG += link_pkgconfig
-unix: PKGCONFIG += sqlite3
+TARGET = counter
 
-INCLUDEPATH += /usr/local/include
-QMAKE_LIBDIR += /usr/local/lib
+CONFIG += console c++11
+CONFIG -= app_bundle qt
 
-# static libs, watch correct order!
-LIBS += -lopencv_highgui
-LIBS += -lopencv_video
-LIBS += -lopencv_imgproc
-LIBS += -lopencv_core
 
-# dynamic libs
-LIBS += -lv4l2 -lv4l1
-LIBS += -lgstvideo-0.10 -lgstapp-0.10
-LIBS += -lxml2
-LIBS += -lglib-2.0
-LIBS += -lgthread-2.0
-LIBS += -lgobject-2.0
-LIBS += -lgstreamer-0.10 -lgstbase-0.10
-LIBS += -ltiff -lpng -ljpeg
-LIBS += -lQt5Core
-LIBS += -lQt5Gui
-LIBS += -lQt5OpenGL
-LIBS += -lQt5Test
-LIBS += -lQt5Widgets
-LIBS += -lXext -lX11
-LIBS += -lICE -lSM -lGL
-LIBS += -lrt -lpthread
-LIBS += -lm -ldl
-LIBS += -lstdc++
-LIBS += -lz
+linux {
+    LIBS += -lboost_filesystem \
+            -lboost_system
+    LIBS += -lopencv_core \
+            -lopencv_imgcodecs \
+            -lopencv_imgproc \
+            -lopencv_highgui \
+            -lopencv_video \
+            -lopencv_videoio
+    LIBS += -lsqlite3
+    LIBS += -lv4l2 -lv4l1
+}
+
+windows {
+    INCLUDEPATH += $$(BOOST)
+    INCLUDEPATH += D:/opencv-3.4.0-mingw/include
+    INCLUDEPATH += D:/Holger/app-dev/sqlite/inc
+
+    LIBS += -L$$(BOOST)/lib \
+        -lboost_filesystem-mgw73-mt-d-x32-1_67 \
+        -lboost_system-mgw73-mt-d-x32-1_67
+    LIBS += -LD:/opencv-3.4.0-mingw/bin \
+        -lopencv_core340 \
+        -lopencv_highgui340 \
+        -lopencv_imgcodecs340 \
+        -lopencv_imgproc340 \
+        -lopencv_video340 \
+        -lopencv_videoio340
+    LIBS += D:/Holger/app-dev/sqlite/bin/sqlite3.dll
+}
+
 
 SOURCES += \
+    ../../../cpp/src/id_pool.cpp \
+    ../../../cpp/src/program_options.cpp \
+    ../../utilities/src/util-visual-trace.cpp \
     ../src/config.cpp \
     ../src/frame_handler.cpp \
     ../src/recorder.cpp \
     ../src/tracker.cpp \
-    ../src/video.cpp \
-    ../../cpp/src/program_options.cpp
+    ../src/video.cpp
 
-include(deployment.pri)
-qtcAddDeployment()
 
 HEADERS += \
+    ../../../cpp/inc/id_pool.h \
+    ../../../cpp/inc/observer.h \
+    ../../../cpp/inc/program_options.h \
+    ../../utilities/inc/util-visual-trace.h \
     ../include/config.h \
     ../include/frame_handler.h \
     ../include/recorder.h \
-    ../include/tracker.h \
-    ../../cpp/inc/observer.h \
-    ../../cpp/inc/program_options.h
+    ../include/tracker.h
+
 

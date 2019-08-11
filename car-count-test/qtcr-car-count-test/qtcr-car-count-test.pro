@@ -6,6 +6,21 @@ CONFIG += console c++11
 
 QMAKE_CXXFLAGS += -Wno-unknown-pragmas # suppress warning emitted by catch 1.3.5
 
+linux {
+    INCLUDEPATH += /home/holger/app-dev/catch#/catch_2.8.0
+
+    LIBS += -lboost_filesystem \
+            -lboost_system
+    LIBS += -lopencv_core \
+            -lopencv_imgcodecs \
+            -lopencv_imgproc \
+            -lopencv_highgui \
+            -lopencv_video \
+            -lopencv_videoio
+    LIBS += -lsqlite3
+    LIBS += -lv4l2 -lv4l1
+}
+
 windows {
     INCLUDEPATH += $$(BOOST)
     INCLUDEPATH += D:/opencv-3.4.0-mingw/include
@@ -24,24 +39,6 @@ windows {
         -lopencv_videoio340
     LIBS += D:/Holger/app-dev/sqlite/bin/sqlite3.dll
 }
-
-linux {
-    INCLUDEPATH += /home/holger/app-dev/catch#/catch_2.8.0
-
-    LIBS += -lboost_filesystem \
-            -lboost_system
-    LIBS += -lopencv_core \
-            -lopencv_imgcodecs \
-            -lopencv_imgproc \
-            -lopencv_highgui \
-            -lopencv_video \
-            -lopencv_videoio
-    LIBS += -lsqlite3
-    LIBS += -lv4l2 -lv4l1
-}
-
-
-
 
 
 SOURCES += \
