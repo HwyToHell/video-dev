@@ -15,7 +15,7 @@
 QMap<int, QString> populateFileMap(const QString& workDir);
 
 
-int main(int argc, char* argv[]) {
+int trace_main(int argc, char* argv[]) {
     (void)argc;
     (void)argv;
    // using namespace std;

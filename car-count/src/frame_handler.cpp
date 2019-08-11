@@ -664,7 +664,8 @@ std::string FrameHandler::locateFilePath(std::string fileName) {
 	}
 
 	// 2. check /home/app_dir
-	path = mSubject->getParam("application_path");
+    string applicationPath = mSubject->getParam("application_path");
+    path = applicationPath;
 	appendDirToPath(path, fileName);
 	if (isFileExist(path)) {
 		m_inVideoFilePath = path;
@@ -672,8 +673,10 @@ std::string FrameHandler::locateFilePath(std::string fileName) {
 	}
 
 	// file not found
-	cerr << "locateVideoFile: " << fileName << " was not found" << endl;
-	return string("");
+    cerr << "locateVideoFile: " << fileName << " was not found in" << endl;
+    cerr << "  cwd: " << currentPath << endl;
+    cerr << "  ~/application_dir: "<< applicationPath << endl;
+    return string("");
 }
 
 

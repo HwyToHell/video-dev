@@ -22,9 +22,11 @@ SOURCES += \
         ../../../cpp/src/id_pool.cpp \
         ../../../cpp/src/program_options.cpp \
         ../../car-count/src/config.cpp \
+        ../../car-count/src/frame_handler.cpp \
         ../../car-count/src/tracker.cpp \
         ../../utilities/src/util-visual-trace.cpp \
         ../src/mainwindow.cpp \
+        ../src/sql-trace-test.cpp \
         ../src/sql_trace.cpp \
         ../src/trace-test.cpp \
         ../src/trackimages.cpp

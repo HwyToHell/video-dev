@@ -40,6 +40,7 @@ windows {
 SOURCES += \
     ../../../cpp/src/id_pool.cpp \
     ../../../cpp/src/program_options.cpp \
+    ../../trace/src/sql_trace.cpp \
     ../../utilities/src/util-visual-trace.cpp \
     ../src/config.cpp \
     ../src/frame_handler.cpp \
@@ -52,6 +53,7 @@ HEADERS += \
     ../../../cpp/inc/id_pool.h \
     ../../../cpp/inc/observer.h \
     ../../../cpp/inc/program_options.h \
+    ../../trace/inc/sql_trace.h \
     ../../utilities/inc/util-visual-trace.h \
     ../include/config.h \
     ../include/frame_handler.h \

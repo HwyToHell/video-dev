@@ -69,15 +69,15 @@ bool SqlTrace::insertTrackState(long long frame, const std::list<Track>* trackLi
     //   frame, trackId, x, y, w, h, confidence, length, velocity
     std::stringstream ss;
     for (auto track : *trackList) {
-        ss << "insert into " << m_tableName << " ('"
-           << frame << "', '"
-           << track.getId() << "', '"
-           << track.getActualEntry().rect().x << "', '"
-           << track.getActualEntry().rect().y << "', '"
-           << track.getActualEntry().width() << "', '"
-           << track.getActualEntry().height() << "', '"
-           << track.getLength() << "', '"
-           << track.getVelocity() << "', '" << "');";
+        ss << "insert into " << m_tableName << " ("
+           << frame << ", "
+           << track.getId() << ", "
+           << track.getActualEntry().rect().x << ", "
+           << track.getActualEntry().rect().y << ", "
+           << track.getActualEntry().width() << ", "
+           << track.getActualEntry().height() << ", "
+           << track.getLength() << ", "
+           << track.getVelocity() << ", " << ");";
         sqlStmt = ss.str();
     }
 

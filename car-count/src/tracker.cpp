@@ -1210,9 +1210,11 @@ std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs, long lo
 	// DEBUG
 	g_trackState.push_back(traceTrackState);	
     g_trackStateMap.insert(std::pair<long long, std::list<TrackState>>(frameCnt, traceTrackState));
-
     // sql trace
-    sqlTrace->insertTrackState(frameCnt, &m_tracks);
+    if (sqlTrace)
+        sqlTrace->insertTrackState(frameCnt, &m_tracks);
+    // END_DEBUG
+
     return &m_tracks;
 }
 
