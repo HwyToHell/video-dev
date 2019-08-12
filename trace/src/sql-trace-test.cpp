@@ -16,7 +16,7 @@
 void adjustFrameSizeParams(Config& conf, FrameHandler& fh);
 bool openCapSource(Config& conf, FrameHandler& fh);
 
-int main(int argc, const char* argv[]) {
+int trc_tst_main(int argc, const char* argv[]) {
     ProgramOptions cmdLineOpts(argc, argv, "i:qr:v:");
 
     // file from command line or file chooser

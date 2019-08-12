@@ -106,7 +106,7 @@ Track createTrackAt(cv::Size roi, cv::Point blobPos, cv::Size blobSize, cv::Poin
 		blobAct += velocity;
 		blobs.push_back(blobAct);
 		track.updateTrackIntersect(blobs, roi);
-		assert(blobs.size() == 0);
+        assert(blobs.size() == 0);
 	}
 	assert(track.getHistory() == 3);
 	//track.addTrackEntry(blobAct, roi);
