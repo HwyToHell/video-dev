@@ -44,6 +44,7 @@ SOURCES += \
         ../../utilities/src/util-visual-trace.cpp \
         ../src/main.cpp \
         ../src/mainwindow.cpp \
+        ../src/sql_trace.cpp \
         ../src/trackimages.cpp
 
 HEADERS += \
@@ -54,6 +55,7 @@ HEADERS += \
         ../../car-count/include/tracker.h \
         ../../utilities/inc/util-visual-trace.h \
         ../inc/mainwindow.h \
+        ../inc/sql_trace.h \
         ../inc/trackimages.h
 
 FORMS += \

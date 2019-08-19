@@ -11,7 +11,6 @@ class SqlTrace
 public:
     SqlTrace(const std::string& dbDirectory, const std::string& dbFile, const std::string& tableName);
     ~SqlTrace();
-    bool createTable();
     bool insertTrackState(long long frame, const std::list<Track>* trackList);
 
 private:

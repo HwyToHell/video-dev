@@ -1,3 +1,5 @@
+#include "../inc/sql_trace.h"
+
 #include <iostream>
 #include <memory>
 #include <string>
@@ -16,7 +18,8 @@
 void adjustFrameSizeParams(Config& conf, FrameHandler& fh);
 bool openCapSource(Config& conf, FrameHandler& fh);
 
-int trc_tst_main(int argc, const char* argv[]) {
+/// process video file and save tracking results in sql db
+int main(int argc, const char* argv[]) {
     ProgramOptions cmdLineOpts(argc, argv, "i:qr:v:");
 
     // file from command line or file chooser
@@ -46,6 +49,7 @@ int trc_tst_main(int argc, const char* argv[]) {
     adjustFrameSizeParams(*pConfig, *pFrameHandler);
     pConfig->saveConfigToFile();
 
+    // tracker with unique IDs
     auto pTracker = std::make_unique<SceneTracker>(pConfig.get(), true);
     pConfig->attach(pTracker.get());
 
@@ -55,25 +59,42 @@ int trc_tst_main(int argc, const char* argv[]) {
     Inset inset = pFrameHandler->createInset(insetImgPath);
     //inset.putCount(cr);
 
-    while(true)
-    {
-        if (!pFrameHandler->segmentFrame()) {
-            std::cerr << "frame segmentation failed" << std::endl;
-            break;
+    try {
+        // define directories for creating sql trace object
+        std::string workDir ="/home/holger/counter";
+        std::string dbFile = "track.sqlite";
+
+        auto pSqlTrace = std::make_unique<SqlTrace>(workDir, dbFile, "tracks");
+        std::cout << pSqlTrace.get() << std::endl;
+
+        long long frameCnt = 0;
+        while(true)
+        {
+            ++frameCnt;
+
+            if (!pFrameHandler->segmentFrame()) {
+                std::cerr << "frame segmentation failed" << std::endl;
+                break;
+            }
+
+        std::list<Track>* pTracks = pTracker->updateTracks(pFrameHandler->calcBBoxes(), frameCnt, pSqlTrace.get());
+        pFrameHandler->showFrame(pTracks, inset);
+
+            if (cv::waitKey(10) == 27) 	{
+                std::cout << "ESC pressed -> end video processing" << std::endl;
+                //cv::imwrite("frame.jpg", frame);
+                break;
+            }
         }
 
-    std::list<Track>* pTracks = pTracker->updateTracks(pFrameHandler->calcBBoxes());
-    pFrameHandler->showFrame(pTracks, inset);
+        qDebug() << "test finished";
+        cv::waitKey(0);
 
-        if (cv::waitKey(10) == 27) 	{
-            std::cout << "ESC pressed -> end video processing" << std::endl;
-            //cv::imwrite("frame.jpg", frame);
-            break;
-        }
+
+    } catch (const char* e) {
+        std::cerr << "exception: " << e << std::endl;
     }
 
-    qDebug() << "test finished";
-    cv::waitKey(0);
     return 0;
 }
 

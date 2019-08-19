@@ -28,8 +28,17 @@ SqlTrace::SqlTrace(const std::string& dbDirectory, const std::string& dbFile, co
         throw "cannot open db";
     }
 
-    // TODO create table, if not exists
-    // delete memberfcn createTable()
+    // create table, if not exist
+    std::stringstream ss;
+    ss << "create table if not exists " << m_tableName << " (frame int, id int, x int, y int, w int, h int, length int, velocity real);";
+    std::string sqlStmt = ss.str();
+    std::string answer;
+    if (!queryDbSingle(m_dbHandle, sqlStmt, answer)) {
+        std::cerr << "__FILE__, __LINE__: cannot create table: " << m_tableName << std::endl;
+        sqlite3_close(m_dbHandle);
+        m_dbHandle = nullptr;
+        throw "cannot create table";
+    }
 }
 
 
@@ -39,23 +48,6 @@ SqlTrace::~SqlTrace() {
         std::cerr << "__FILE__, __LINE__: error closing data base" << std::endl;
 }
 
-
-bool SqlTrace::createTable() {
-    // table columns:
-    // frame, trackId, x, y, w, h, confidence, length, velocity
-
-    // create table, if not exist
-    std::stringstream ss;
-    ss << "create table if not exists " << m_tableName << " (frame int, id int, x int, y int, w int, h int, length int, velocity real);";
-    std::string sqlStmt = ss.str();
-    std::string answer;
-    if (!queryDbSingle(m_dbHandle, sqlStmt, answer)) {
-        std::cerr << "__FILE__, __LINE__: cannot create table: " << m_tableName << std::endl;
-        return false;
-    }
-
-    return true;
-}
 
 
 bool SqlTrace::insertTrackState(long long frame, const std::list<Track>* trackList) {

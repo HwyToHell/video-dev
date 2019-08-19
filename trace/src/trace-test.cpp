@@ -14,7 +14,7 @@
 
 QMap<int, QString> populateFileMap(const QString& workDir);
 
-
+/// show track results in highgui windows
 int trace_main(int argc, char* argv[]) {
     (void)argc;
     (void)argv;
