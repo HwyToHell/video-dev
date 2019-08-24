@@ -27,6 +27,9 @@ QList<QPixmap> getCurrImgList(QSize dispImgSize);
 /// get track information (#id, confidence, ...) after all assignments of SceneTracker::updateTracks
 QList<QString> getCurrTrackInfo();
 
+/// get first video frame for pre-view purposes
+QPixmap getPreviewImageFromVideo(QString fileName);
+
 /// print track image on pixmap
 QPixmap getTrackImage(const TrackState& trackState, QSize dispImgSize);
 

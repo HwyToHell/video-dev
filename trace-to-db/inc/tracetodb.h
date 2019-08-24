@@ -18,7 +18,10 @@ public:
 private slots:
     void on_selectVideoFile_triggered();
 
-private:
+private: // functions
+    bool setVideoPreviewImage(QPixmap preview);
+
+private: // variables
     Ui::TraceToDb *ui;
     QString m_videoFile;
     QString m_workDir = "/home/holger";

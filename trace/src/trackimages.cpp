@@ -31,6 +31,17 @@ QPixmap cvMatToQPixmap(const cv::Mat& inMat) {
 }
 
 
+QPixmap getPreviewImageFromVideo(QString fileName) {
+    cv::VideoCapture vidCap(fileName.toStdString());
+    cv::Mat image;
+    for (int i = 0; i < 9; ++i) {
+        vidCap.read(image);
+        qDebug() << i;
+    }
+    return cvMatToQPixmap(image);
+}
+
+
 QSize getRoiSize(QString fileName) {
     QSize size(0,0);
     cv::Mat image = cv::imread(fileName.toStdString());

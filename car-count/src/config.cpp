@@ -659,7 +659,7 @@ std::string getHomePath() {
 	#elif defined (__linux__)
         char *pHomePath = nullptr;
 		pHomePath = getenv("HOME");
-        if (pHomePath ==0) {
+        if (pHomePath == nullptr) {
 			cerr << "getHomePath: no home path set in $env" << endl;
 			return std::string("");
 		} else {

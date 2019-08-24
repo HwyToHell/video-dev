@@ -10,25 +10,39 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = TraceToDb
 TEMPLATE = app
-
-# The following define makes your compiler emit warnings if you use
-# any feature of Qt which has been marked as deprecated (the exact warnings
-# depend on your compiler). Please consult the documentation of the
-# deprecated API in order to know how to port your code away from it.
 DEFINES += QT_DEPRECATED_WARNINGS
-
-# You can also make your code fail to compile if you use deprecated APIs.
-# In order to do so, uncomment the following line.
-# You can also select to disable deprecated APIs only up to a certain version of Qt.
-#DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
-
 CONFIG += c++11
 
+LIBS += -lboost_filesystem \
+        -lboost_system
+LIBS += -lopencv_core \
+        -lopencv_imgcodecs \
+        -lopencv_imgproc \
+        -lopencv_highgui \
+        -lopencv_video \
+        -lopencv_videoio
+LIBS += -lsqlite3
+
 SOURCES += \
+    ../../cpp/src/id_pool.cpp \
+    ../../cpp/src/program_options.cpp \
+    ../car-count/src/config.cpp \
+    ../car-count/src/tracker.cpp \
+    ../trace/src/sql_trace.cpp \
+    ../trace/src/trackimages.cpp \
+    ../utilities/src/util-visual-trace.cpp \
         src/main.cpp \
         src/tracetodb.cpp \
 
 HEADERS += \
+    ../../cpp/inc/id_pool.h \
+    ../../cpp/inc/program_options.h \
+    ../car-count/include/config.h \
+    ../car-count/include/frame_handler.h \
+    ../car-count/include/tracker.h \
+    ../trace/inc/sql_trace.h \
+    ../trace/inc/trackimages.h \
+    ../utilities/inc/util-visual-trace.h \
         inc/tracetodb.h \
 
 FORMS += \
