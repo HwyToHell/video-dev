@@ -36,7 +36,6 @@ QPixmap getPreviewImageFromVideo(QString fileName) {
     cv::Mat image;
     for (int i = 0; i < 9; ++i) {
         vidCap.read(image);
-        qDebug() << i;
     }
     return cvMatToQPixmap(image);
 }
@@ -199,7 +198,6 @@ int nextTrackState() {
     // tail reached -> set iterator to head
     if ( g_itCurrent == g_trackStateMap.cend()  )
         g_itCurrent = g_trackStateMap.cbegin();
-    //qDebug() << "idx:" << g_itCurrent->first;
     return static_cast<int>( g_itCurrent->first );
 }
 
@@ -210,7 +208,6 @@ int prevTrackState() {
     // head reached -> set iterator to tail
     else
         g_itCurrent = --g_trackStateMap.end();
-    //qDebug() << "idx:" << g_itCurrent->first;
     return static_cast<int>( g_itCurrent->first );
 }
 

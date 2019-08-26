@@ -6,28 +6,40 @@
 #include <QDebug>
 #include <QFileDialog>
 #include <QPainter>
+#include <QSettings>
+#include <QVariant>
 #include "../../trace/inc/trackimages.h"
 
-ClickableLabel* addClickableLabel(Ui::TraceToDb* ui) {
-    int rowCount = ui->gridLayout_Video->rowCount();
-    qDebug() << "rows in video layout:" << rowCount;
-    ClickableLabel* label = new ClickableLabel();
-    ui->gridLayout_Video->addWidget(label, rowCount+1, 0);
-    return label;
-}
+
+ClickableLabel* addClickableLabel(Ui::TraceToDb* ui);
+void drawRectOnLabel(QLabel* label, QPixmap* pic);
+
 
 TraceToDb::TraceToDb(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::TraceToDb)
 {
     ui->setupUi(this);
-    // m_videoLabel = addClickableLabel(ui);
+    m_settingsFile = QApplication::applicationDirPath() + "/tracetodb.ini";
+    loadSettings();
 }
+
 
 TraceToDb::~TraceToDb()
 {
+    saveSettings();
     delete ui;
 }
+
+
+void TraceToDb::loadSettings() {
+    QSettings settings(m_settingsFile, QSettings::IniFormat);
+    QVariant videoFileVariant = settings.value( "video_file", QDir::homePath() );
+    if (videoFileVariant.isValid()) {
+        m_workDir = videoFileVariant.toString();
+    }
+}
+
 
 void TraceToDb::on_selectVideoFile_triggered()
 {
@@ -44,21 +56,15 @@ void TraceToDb::on_selectVideoFile_triggered()
 }
 
 
-void drawRectOnLabel(QLabel* label, QPixmap* pic) {
-    QPainter p;
-    p.begin(pic);
-    p.setBrush(Qt::red);
-    p.drawRect(10,10,100,100);
-    p.end();
-
-    label->setPixmap(*pic);
+void TraceToDb::saveSettings() {
+    QSettings settings(m_settingsFile, QSettings::IniFormat);
+    settings.setValue( "video_file", m_videoFile );
 }
 
 
 bool TraceToDb::setVideoPreviewImage(QPixmap preview) {
 
     if (preview.isNull()) {
-        //qDebug() << "empty preview image";
         ui->statusBar->showMessage("empty preview image");
         return false;
     }
@@ -74,3 +80,24 @@ bool TraceToDb::setVideoPreviewImage(QPixmap preview) {
     return true;
 }
 
+
+//////////////////////////////////////////////////////////////////////////////
+// Functions /////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+ClickableLabel* addClickableLabel(Ui::TraceToDb* ui) {
+    int rowCount = ui->gridLayout_Video->rowCount();
+    ClickableLabel* label = new ClickableLabel();
+    ui->gridLayout_Video->addWidget(label, rowCount+1, 0);
+    return label;
+}
+
+
+void drawRectOnLabel(QLabel* label, QPixmap* pic) {
+    QPainter p;
+    p.begin(pic);
+    p.setBrush(Qt::red);
+    p.drawRect(10,10,100,100);
+    p.end();
+
+    label->setPixmap(*pic);
+}

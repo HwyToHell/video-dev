@@ -71,7 +71,6 @@ void MainWindow::loadSettings() {
     if (workDirVariant.isValid()) {
         m_workDir = workDirVariant.toString();
     }
-    qDebug() << "work dir: " << m_workDir;
 
     ui->workdir_output->setText(m_workDir);
 }

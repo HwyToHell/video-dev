@@ -26,10 +26,8 @@ void ClickableLabel::mouseMoveEvent(QMouseEvent* event) {
         m_roi = moveWithinLimits(m_roiPrev, dPos, limits);
         m_roiPrev = m_roi;
 
-        // emit paint event
+        // re-paint widget
         this->update();
-        qDebug() << "dPos:" << dPos;
-        qDebug() << "pos: " << m_roi;
     }
 }
 
@@ -42,7 +40,6 @@ void ClickableLabel::mousePressEvent(QMouseEvent* event) {
             // TODO change cursor
             m_clickPosPrev = event->pos();
             m_moveRoi = true;
-            qDebug() << "left button pressed";
         }
     }
 }
@@ -51,7 +48,6 @@ void ClickableLabel::mousePressEvent(QMouseEvent* event) {
 void ClickableLabel::mouseReleaseEvent(QMouseEvent* event) {
     if (event->button() == Qt::LeftButton) {
         m_moveRoi = false;
-        qDebug() << "left button released";
     }
 }
 
@@ -112,7 +108,6 @@ QRect moveWithinLimits(const QRect& rcToMove, const QPoint& dPos, const QRect& r
             rcMoved.setHeight(rcToMove.height());
         }
     }
-    qDebug() << "rcMoved:" << rcMoved;
 
     return rcMoved;
 }
