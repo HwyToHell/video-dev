@@ -1,5 +1,6 @@
 #ifndef TRACETODB_H
 #define TRACETODB_H
+#include "clickablelabel.h"
 
 #include <QMainWindow>
 
@@ -23,6 +24,7 @@ private: // functions
 
 private: // variables
     Ui::TraceToDb *ui;
+    ClickableLabel* m_videoLabel;
     QString m_videoFile;
     QString m_workDir = "/home/holger";
 };
