@@ -809,7 +809,7 @@ void printCommandOptions() {
 
 
 /// set roi size in config
-bool setRoiToConfig(Config* pConfig, cv::Size roi) {
+bool setRoiSizeToConfig(Config* pConfig, cv::Size roi) {
 	using namespace std;
 
 	// set config param roi

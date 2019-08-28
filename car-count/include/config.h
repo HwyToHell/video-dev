@@ -103,7 +103,7 @@ void printCommandOptions();
 
 // Config manipulation
 /// set roi size in config
-bool setRoiToConfig(Config* pConfig, cv::Size roi);
+bool setRoiSizeToConfig(Config* pConfig, cv::Size roi);
 
 // Directory manipulation functions
 std::string		getHomePath();

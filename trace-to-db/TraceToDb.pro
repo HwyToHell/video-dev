@@ -11,7 +11,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = TraceToDb
 TEMPLATE = app
 DEFINES += QT_DEPRECATED_WARNINGS
-CONFIG += c++11
+CONFIG += c++14
 
 LIBS += -lboost_filesystem \
         -lboost_system
@@ -27,6 +27,7 @@ SOURCES += \
     ../../cpp/src/id_pool.cpp \
     ../../cpp/src/program_options.cpp \
     ../car-count/src/config.cpp \
+    ../car-count/src/frame_handler.cpp \
     ../car-count/src/tracker.cpp \
     ../trace/src/sql_trace.cpp \
     ../trace/src/trackimages.cpp \

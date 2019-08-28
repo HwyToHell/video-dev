@@ -137,12 +137,12 @@ public:
 	bool					openVideoOut(std::string fileName);
 	bool					segmentFrame();
     void					showFrame(std::list<Track>* tracks, Inset inset);
+    void					update(); // updates observer with subject's parameters (Config)
 	void					writeFrame();
 	// DEBUG
 	int						getFrameCount();
-private:
-	void					update(); // updates observer with subject's parameters (Config)
 
+private:
 	// as of opencv 3.0 call createBackgroundSubtractorMOG2() in order to create instance
 	// function returns smart pointer to instance
 	typedef cv::Ptr<cv::BackgroundSubtractorMOG2> PtrBgrndSubtr;

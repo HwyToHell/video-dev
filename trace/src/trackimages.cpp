@@ -215,7 +215,7 @@ int prevTrackState() {
 void setRoiToImgSize(Config* pConfig, QString workDir, QString file) {
     std::string fileName = workDir.toStdString() + "/" + file.toStdString();
     cv::Mat img = cv::imread(fileName);
-    setRoiToConfig(pConfig, img.size());
+    setRoiSizeToConfig(pConfig, img.size());
 }
 
 

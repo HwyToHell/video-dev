@@ -72,6 +72,10 @@ void ClickableLabel::paintEvent(QPaintEvent* event) {
 }
 
 
+QRect ClickableLabel::roi() const {
+    return m_roi;
+}
+
 
 void ClickableLabel::setRoi(QRect roi) {
     m_roi = roi;

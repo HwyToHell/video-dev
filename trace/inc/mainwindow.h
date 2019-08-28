@@ -59,8 +59,8 @@ private:
     QString m_settingsFile;
     QString m_workDir;
     QList<TraceLabels> m_traceLabelList;
-    std::unique_ptr<Config> m_pConfig;
-    std::unique_ptr<SceneTracker> m_pTracker;
+    std::unique_ptr<Config> m_pConfig = nullptr;
+    std::unique_ptr<SceneTracker> m_pTracker = nullptr;
 };
 
 #endif // MAINWINDOW_H

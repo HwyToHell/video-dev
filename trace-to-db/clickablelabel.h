@@ -8,6 +8,7 @@ class ClickableLabel : public QLabel
     Q_OBJECT
 public:
     explicit ClickableLabel(QWidget *parent = nullptr);
+    QRect roi() const;
     void setRoi(QRect roi);
 
 signals:

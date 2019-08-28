@@ -27,7 +27,7 @@ int track_test_main(int argc, char* argv[]) {
 	cv::Size roi(100, 100);
 	Config config;
 	Config* pConfig = &config;
-	setRoiToConfig(pConfig, roi);
+    setRoiSizeToConfig(pConfig, roi);
 	SceneTracker scene(pConfig); 
 	SceneTracker* pScene = &scene;
 	config.attach(pScene);

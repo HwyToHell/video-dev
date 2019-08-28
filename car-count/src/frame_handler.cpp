@@ -672,6 +672,14 @@ std::string FrameHandler::locateFilePath(std::string fileName) {
 		return path;
 	}
 
+    // 3. check file name as full path name (starting at root)
+    path = "/";
+    appendDirToPath(path, fileName);
+    if (isFileExist(path)) {
+        m_inVideoFilePath = path;
+        return path;
+    }
+
 	// file not found
     cerr << "locateVideoFile: " << fileName << " was not found in" << endl;
     cerr << "  cwd: " << currentPath << endl;
