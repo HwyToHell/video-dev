@@ -4,7 +4,9 @@
 
 #include <opencv2/opencv.hpp>
 #include <QDebug>
+#include <QDir>
 #include <QFileDialog>
+#include <QMessageBox>
 #include <QPainter>
 #include <QSettings>
 #include <QVariant>
@@ -15,7 +17,7 @@
 ClickableLabel* addClickableLabel(Ui::TraceToDb* ui);
 void drawRectOnLabel(QLabel* label, QPixmap* pic);
 QRect getQRoiFromConfig(Config *pConfig);
-bool segmentToDb(Config *pConfig, FrameHandler *pFrameHandler, SceneTracker *pTracker);
+bool segmentToDb(FrameHandler *pFrameHandler, SceneTracker *pTracker, SqlTrace *pDB, const Inset& inset);
 bool setQRoiToConfig(Config *pConfig, QRect roi);
 
 
@@ -58,24 +60,42 @@ void TraceToDb::loadSettings() {
 
 void TraceToDb::on_runTrackingToDb_triggered()
 {
-    // split video file name
+    // save video file name and ROI to config before executing tracking
+    //  framhandler and tracker are notified about parameter change by config::setParam
     QFileInfo fileInfo(m_videoFile);
-    //std::string videoFileName = fileInfo.fileName().toStdString();
-    //std::string videoFileDir = fileInfo.path().toStdString();
-    std::string videoFilePath = fileInfo.absoluteFilePath().toStdString();
-    qDebug() << "name:" << fileInfo.absoluteFilePath();
-
-    // save video file name and ROIto config before executing tracking
-    m_config.get()->setParam("video_file", videoFilePath);
+    QString videoFilePath = fileInfo.absoluteFilePath();
+    m_config->setParam("video_file", videoFilePath.toStdString());
     setQRoiToConfig(m_config.get(), ui->video_output_label->roi());
-    m_config.get()->saveConfigToFile();
+    m_config->saveConfigToFile();
 
-    // update frame handler's and tracker's parameters from config
-    m_framehandler.get()->update(); // for video file
-    m_tracker.get()->update();      // for roi
+    // create database in new directory (video file name w/o extension)
+    QString dbPath = fileInfo.absolutePath() + "/" + fileInfo.completeBaseName();
+    qDebug() << "db path:" << dbPath;
+    QDir vidDir(fileInfo.absolutePath());
+    if (!vidDir.mkpath(dbPath)) {
+        QMessageBox msg;
+        msg.setText("cannot create directory");
+        return;
+    }
+    auto sqlTrace = std::make_unique<SqlTrace>(dbPath.toStdString(), "track.sqlite", "tracks");
+
+    // create inset
+    std::string insetImgPath = m_config->getParam("application_path");
+    appendDirToPath(insetImgPath, m_config->getParam("inset_file"));
+    Inset inset = m_framehandler->createInset(insetImgPath);
+
+    // initialize file reader with selected video file
+    bool success = m_framehandler->initFileReader(videoFilePath.toStdString());
 
     // execute segmentation
-    // bool success = segmentToDb(Config *pConfig, FrameHandler *pFrameHandler, SceneTracker *pTracker);
+    success &= segmentToDb(m_framehandler.get(), m_tracker.get(), sqlTrace.get(), inset);
+
+    if (success) {
+        ui->statusBar->showMessage("tracking successful");
+    } else {
+        ui->statusBar->showMessage("error segmenting to DB");
+    }
+
 
 }
 
@@ -152,20 +172,11 @@ QRect getQRoiFromConfig(Config *pConfig) {
 }
 
 
-bool segmentToDb(Config *pConfig, FrameHandler *pFrameHandler, SceneTracker *pTracker) {
+bool segmentToDb(FrameHandler *pFrameHandler, SceneTracker *pTracker, SqlTrace *pDB, const Inset& inset) {
+
+    bool success = false;
 
     try {
-        // create inset
-        std::string insetImgPath = pConfig->getParam("application_path");
-        appendDirToPath(insetImgPath, pConfig->getParam("inset_file"));
-        Inset inset = pFrameHandler->createInset(insetImgPath);
-
-        // define directories for creating sql trace object
-        std::string workDir ="/home/holger/counter";
-        std::string dbFile = "track.sqlite";
-
-        auto pSqlTrace = std::make_unique<SqlTrace>(workDir, dbFile, "tracks");
-        std::cout << pSqlTrace.get() << std::endl;
 
         long long frameCnt = 0;
         while(true)
@@ -177,7 +188,7 @@ bool segmentToDb(Config *pConfig, FrameHandler *pFrameHandler, SceneTracker *pTr
                 break;
             }
 
-        std::list<Track>* pTracks = pTracker->updateTracks(pFrameHandler->calcBBoxes(), frameCnt, pSqlTrace.get());
+        std::list<Track>* pTracks = pTracker->updateTracks(pFrameHandler->calcBBoxes(), frameCnt, pDB);
         pFrameHandler->showFrame(pTracks, inset);
 
             if (cv::waitKey(10) == 27) 	{
@@ -193,9 +204,10 @@ bool segmentToDb(Config *pConfig, FrameHandler *pFrameHandler, SceneTracker *pTr
 
     } catch (const char* e) {
         std::cerr << "exception: " << e << std::endl;
+        success = false;
     }
 
-    return true;
+    return success;
 
 }
 

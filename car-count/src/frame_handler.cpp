@@ -835,3 +835,12 @@ void FrameHandler::writeFrame() {
 int FrameHandler::getFrameCount() {
 	return m_frameCounter;
 }
+
+QRect FrameHandler::getRoi() {
+    QRect rc;
+    rc.setX(static_cast<int>(m_roi.x));
+    rc.setY(static_cast<int>(m_roi.y));
+    rc.setWidth(static_cast<int>(m_roi.width));
+    rc.setHeight(static_cast<int>(m_roi.height));
+    return rc;
+}

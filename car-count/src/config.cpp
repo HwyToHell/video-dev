@@ -609,6 +609,7 @@ bool Config::setParam(std::string name, std::string value) {
 	if (iParam == m_paramList.end())
 		return false;
 	iParam->setValue(value);
+    this->notifyObservers();
 	return true;
 }
 

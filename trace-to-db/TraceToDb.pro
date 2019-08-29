@@ -38,6 +38,7 @@ SOURCES += \
 
 HEADERS += \
     ../../cpp/inc/id_pool.h \
+    ../../cpp/inc/observer.h \
     ../../cpp/inc/program_options.h \
     ../car-count/include/config.h \
     ../car-count/include/frame_handler.h \

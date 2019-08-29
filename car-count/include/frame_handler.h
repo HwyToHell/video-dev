@@ -9,6 +9,7 @@
 #endif
 #include "config.h"
 #include "recorder.h"
+#include <QRect>
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -141,6 +142,7 @@ public:
 	void					writeFrame();
 	// DEBUG
 	int						getFrameCount();
+    QRect                   getRoi();
 
 private:
 	// as of opencv 3.0 call createBackgroundSubtractorMOG2() in order to create instance
