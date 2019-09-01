@@ -272,14 +272,14 @@ public:
 	/// updates tracks with new motion objects (new intersection method)
 	/// returns pointer to updated track list
     std::list<Track>* updateTracks(std::list<cv::Rect>& blobs, long long frameCnt = 0,
-                                   SqlTrace* sqlTrace = nullptr);
+                                   SqlTrace* sqlTrace = nullptr, bool globTrace = false);
 
 	// DEBUG
 	void inspect(int frameCnt);
 	// END DEBUG
 private:
     // changeable parameters (at run-time)
-	ClassifyVehicle		m_classify;
+    ClassifyVehicle		m_classify;
     bool                m_hasUniqueTrackIDs;
 	cv::Size			m_roiSize;
 	int					m_maxConfidence;
@@ -339,6 +339,9 @@ bool isNextUpdateOccluded(const Track& mvLeft, const Track& mvRight);
 
 /// return rectangle while tracks are occluded
 cv::Rect occludedArea(Track& mvLeft, Track& mvRight, int updateSteps);
+
+/// blobs on roi edge are considered outside roi
+bool outsideRoi(const cv::Rect& rect, const cv::Size roi);
 
 // DEBUG
 void printRect(cv::Rect& rect);

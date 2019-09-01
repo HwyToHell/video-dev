@@ -15,6 +15,7 @@ using namespace std;
 extern VecTrackStateList g_trackState;
 extern size_t g_idx;
 
+
 double euclideanDist(const cv::Point& pt1, const cv::Point& pt2) {
 	cv::Point diff = pt1 - pt2;
     return sqrt(static_cast<double>( (diff.x * diff.x + diff.y * diff.y) ));
@@ -437,9 +438,9 @@ bool isBlobNotReversingTrack(const Track& track, const cv::Rect& blob, cv::Point
 
 /// true if entire rect is located outside of roi
 bool outsideRoi(const cv::Rect& rect, const cv::Size roi) {
-	if ( rect.x + rect.width <= 0 || rect.x > roi.width )
+    if ( rect.x + rect.width <= 0 || rect.x >= roi.width )
 		return true;
-	if ( rect.y + rect.height <= 0 || rect.y > roi.height )
+    if ( rect.y + rect.height <= 0 || rect.y >= roi.height )
 		return true;
 	return false;
 }
@@ -1150,13 +1151,13 @@ void printIsOccluded(Track& track) {
 	return;
 }
 
-std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs, long long frameCnt, SqlTrace* sqlTrace) {
+std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs, long long frameCnt, SqlTrace* sqlTrace, bool globTrace) {
     (void)frameCnt;
 	// DEBUG
 	using namespace std;
 	std::list<TrackState> traceTrackState;
     traceTrackState.push_back(TrackState("before blob assign", m_roiSize, blobs, m_occlusions.getList(), m_tracks));
-	// END_DEBUG
+    // END_DEBUG
 
 	//1 assign blobs based on occlusion
 	// occluded tracks -> special track update
@@ -1208,8 +1209,10 @@ std::list<Track>* SceneTracker::updateTracks(std::list<cv::Rect>& blobs, long lo
 	// END_DEBUG
 
 	// DEBUG
-	g_trackState.push_back(traceTrackState);	
-    g_trackStateMap.insert(std::pair<long long, std::list<TrackState>>(frameCnt, traceTrackState));
+    if (globTrace) {
+        g_trackState.push_back(traceTrackState);
+        g_trackStateMap.insert(std::pair<long long, std::list<TrackState>>(frameCnt, traceTrackState));
+    }
     // sql trace
     if (sqlTrace)
         sqlTrace->insertTrackState(frameCnt, &m_tracks);

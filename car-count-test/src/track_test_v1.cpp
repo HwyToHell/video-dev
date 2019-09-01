@@ -431,3 +431,73 @@ TEST_CASE("#trk010 updateTrack: mark for deletion, if substitute outside roi", "
 		}
 	}
 }
+
+
+TEST_CASE("#trk011 outsideRoi: blobs at roi edge are considered outside", "[Track]") {
+    cv::Size roi(100,100);
+    cv::Size blobSize(30,10);
+
+    SECTION("blob one off left edge --> outside") {
+        cv::Point org(-blobSize.width - 1, roi.height/2);
+        cv::Rect blob(org, blobSize);
+        REQUIRE( true == outsideRoi(blob, roi));
+
+        SECTION("blob at left edge --> outside") {
+            blob = blob + cv::Point(1,0);
+            REQUIRE( true == outsideRoi(blob, roi));
+
+            SECTION("blob one pixel inside left edge --> inside") {
+                blob = blob + cv::Point(1,0);
+                REQUIRE( false == outsideRoi(blob, roi));
+            }
+        }
+    }
+
+    SECTION("blob one off right edge --> outside") {
+        cv::Point org(roi.width + 1, roi.height/2);
+        cv::Rect blob(org, blobSize);
+        REQUIRE( true == outsideRoi(blob, roi));
+
+        SECTION("blob at right edge --> outside") {
+            blob = blob + cv::Point(-1,0);
+            REQUIRE( true == outsideRoi(blob, roi));
+
+            SECTION("blob one pixel inside right edge --> inside") {
+                blob = blob + cv::Point(-1,0);
+                REQUIRE( false == outsideRoi(blob, roi));
+            }
+        }
+    }
+
+    SECTION("blob one off top edge --> outside") {
+        cv::Point org(roi.width/2, -blobSize.height - 1);
+        cv::Rect blob(org, blobSize);
+        REQUIRE( true == outsideRoi(blob, roi));
+
+        SECTION("blob at top edge --> outside") {
+            blob = blob + cv::Point(0,1);
+            REQUIRE( true == outsideRoi(blob, roi));
+
+            SECTION("blob one pixel inside top edge --> inside") {
+                blob = blob + cv::Point(0,1);
+                REQUIRE( false == outsideRoi(blob, roi));
+            }
+        }
+    }
+
+    SECTION("blob one off bottom edge --> outside") {
+        cv::Point org(roi.width/2, roi.height + 1);
+        cv::Rect blob(org, blobSize);
+        REQUIRE( true == outsideRoi(blob, roi));
+
+        SECTION("blob at bottom edge --> outside") {
+            blob = blob + cv::Point(0,-1);
+            REQUIRE( true == outsideRoi(blob, roi));
+
+            SECTION("blob one pixel inside bottom edge --> inside") {
+                blob = blob + cv::Point(0,-1);
+                REQUIRE( false == outsideRoi(blob, roi));
+            }
+        }
+    }
+}

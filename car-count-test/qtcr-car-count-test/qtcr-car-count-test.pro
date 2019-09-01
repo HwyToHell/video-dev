@@ -1,9 +1,10 @@
 TEMPLATE = app
 TARGET = test
 
-CONFIG -= app_bundle qt
-CONFIG += console c++11
+CONFIG -= app_bundle
+CONFIG += console c++14
 
+QT += core
 QMAKE_CXXFLAGS += -Wno-unknown-pragmas # suppress warning emitted by catch 1.3.5
 
 linux {
@@ -47,6 +48,7 @@ SOURCES += \
     ../../car-count/src/config.cpp \
     ../../car-count/src/recorder.cpp \
     ../../car-count/src/tracker.cpp \
+    ../../trace/src/sql_trace.cpp \
     ../../utilities/src/util-visual-trace.cpp \
     ../src/main.cpp \
     ../src/occlusion_test_v1.cpp \
@@ -62,5 +64,6 @@ HEADERS += \
     ../../car-count/include/config.h \
     ../../car-count/include/recorder.h \
     ../../car-count/include/tracker.h \
+    ../../trace/inc/sql_trace.h \
     ../../utilities/inc/util-visual-trace.h \
     ../src/stdafx.h
