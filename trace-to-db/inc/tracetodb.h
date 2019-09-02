@@ -20,10 +20,14 @@ class TraceToDb : public QMainWindow
 public:
     explicit TraceToDb(QWidget *parent = nullptr);
     ~TraceToDb();
+    enum RoiType {
+        square100,
+        square200,
+        total
+    };
 
 private slots:
     void on_selectVideoFile_triggered();
-
     void on_runTrackingToDb_triggered();
 
 private: // functions
@@ -40,6 +44,7 @@ private: // variables
     QString                         m_videoFile;
     ClickableLabel                  *m_videoLabel; // TODO delete
     QString                         m_workDir = "/home/holger";
+    const QSize                     m_roiSizes[RoiType::total] {QSize(100,100), QSize(200,200)};
 };
 
 #endif // TRACETODB_H

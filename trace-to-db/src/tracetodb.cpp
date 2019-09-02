@@ -15,8 +15,8 @@
 
 
 ClickableLabel* addClickableLabel(Ui::TraceToDb* ui);
-void drawRectOnLabel(QLabel* label, QPixmap* pic);
 QRect getQRoiFromConfig(Config *pConfig);
+bool isVideoFileAccessable(const QString& videoFile);
 bool segmentToDb(FrameHandler *pFrameHandler, SceneTracker *pTracker, SqlTrace *pDB, const Inset& inset);
 bool setQRoiToConfig(Config *pConfig, QRect roi);
 
@@ -39,6 +39,15 @@ TraceToDb::TraceToDb(QWidget *parent) :
     // tracker with unique IDs
     m_tracker = std::make_unique<SceneTracker>(m_config.get(), true);
     m_config.get()->attach(m_tracker.get());
+
+    // set preview image (if available)
+    if (isVideoFileAccessable(m_videoFile)) {
+        ui->video_path_label->setText(m_videoFile);
+        QPixmap preview = getPreviewImageFromVideo(m_videoFile);
+        setVideoPreviewImage(preview);
+        QRect roi = getQRoiFromConfig(m_config.get());
+        ui->video_output_label->setRoi(roi);
+    }
 }
 
 
@@ -99,6 +108,7 @@ void TraceToDb::on_runTrackingToDb_triggered()
 
 }
 
+
 void TraceToDb::on_selectVideoFile_triggered()
 {
    QString videoFile = QFileDialog::getOpenFileName(this,
@@ -109,12 +119,12 @@ void TraceToDb::on_selectVideoFile_triggered()
 
     ui->video_path_label->setText(m_videoFile);
 
+    // get label image
     QPixmap preview = getPreviewImageFromVideo(videoFile);
     setVideoPreviewImage(preview);
 
     // setROI on preview image label
     QRect roi = getQRoiFromConfig(m_config.get());
-    qDebug() << "roi:" << roi;
     ui->video_output_label->setRoi(roi);
 }
 
@@ -123,6 +133,7 @@ void TraceToDb::saveSettings() {
     QSettings settings(m_settingsFile, QSettings::IniFormat);
     settings.setValue( "video_file", m_videoFile );
 }
+
 
 bool TraceToDb::setVideoPreviewImage(QPixmap preview) {
 
@@ -150,17 +161,6 @@ ClickableLabel* addClickableLabel(Ui::TraceToDb* ui) {
 }
 
 
-void drawRectOnLabel(QLabel* label, QPixmap* pic) {
-    QPainter p;
-    p.begin(pic);
-    p.setBrush(Qt::red);
-    p.drawRect(10,10,100,100);
-    p.end();
-
-    label->setPixmap(*pic);
-}
-
-
 QRect getQRoiFromConfig(Config *pConfig) {
     QRect roi;
     pConfig->readConfigFile(); // "~/counter/config.sqlite"
@@ -168,7 +168,21 @@ QRect getQRoiFromConfig(Config *pConfig) {
     roi.setY(std::stoi(pConfig->getParam("roi_y")));
     roi.setWidth(std::stoi(pConfig->getParam("roi_width")));
     roi.setHeight(std::stoi(pConfig->getParam("roi_height")));
+    // use default, if 0
+    if (roi.x() == 0 || roi.y() == 0) {
+        roi.setX(100);
+        roi.setY(100);
+    }
     return roi;
+}
+
+
+bool isVideoFileAccessable(const QString& videoFile) {
+    QFileInfo fileInfo(videoFile);
+    if (fileInfo.exists() && fileInfo.isReadable())
+        return true;
+    else
+        return false;
 }
 
 
