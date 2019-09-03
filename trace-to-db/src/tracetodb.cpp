@@ -1,6 +1,6 @@
 #include "../inc/tracetodb.h"
 #include "ui_tracetodb.h"
-#include "clickablelabel.h"
+#include "../inc/clickablelabel.h"
 
 #include <opencv2/opencv.hpp>
 #include <QDebug>
@@ -26,6 +26,9 @@ TraceToDb::TraceToDb(QWidget *parent) :
     ui(new Ui::TraceToDb)
 {
     ui->setupUi(this);
+    addMenuPrefs();
+
+
     m_settingsFile = QApplication::applicationDirPath() + "/tracetodb.ini";
     loadSettings();
 
@@ -55,6 +58,14 @@ TraceToDb::~TraceToDb()
 {
     saveSettings();
     delete ui;
+}
+
+
+void TraceToDb::addMenuPrefs() {
+    QActionGroup *roiGroup = new QActionGroup(this);
+    QAction *aSquare100 = new QAction("100x100");
+    roiGroup->addAction(aSquare100);
+    ui->menuPreferences->addAction(aSquare100);
 }
 
 

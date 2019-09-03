@@ -1,4 +1,4 @@
-#include "clickablelabel.h"
+#include "../inc/clickablelabel.h"
 
 #include <QDebug>
 #include <QMouseEvent>
@@ -58,7 +58,7 @@ void ClickableLabel::paintEvent(QPaintEvent* event) {
     QPainter painter;
     painter.begin(this);
     painter.setPen(Qt::red);
-    painter.setCompositionMode(QPainter::RasterOp_SourceXorDestination);
+    //painter.setCompositionMode(QPainter::RasterOp_SourceXorDestination);
 
     // moving: erase prev roi, draw new roi
     if (m_moveRoi) {

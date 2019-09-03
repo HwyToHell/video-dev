@@ -31,6 +31,7 @@ private slots:
     void on_runTrackingToDb_triggered();
 
 private: // functions
+    void addMenuPrefs();
     void loadSettings();
     void saveSettings();
     bool setVideoPreviewImage(QPixmap preview);

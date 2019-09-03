@@ -32,9 +32,9 @@ SOURCES += \
     ../trace/src/sql_trace.cpp \
     ../trace/src/trackimages.cpp \
     ../utilities/src/util-visual-trace.cpp \
-    clickablelabel.cpp \
-        src/main.cpp \
-        src/tracetodb.cpp \
+    src/clickablelabel.cpp \
+    src/main.cpp \
+    src/tracetodb.cpp \
 
 HEADERS += \
     ../../cpp/inc/id_pool.h \
@@ -46,8 +46,8 @@ HEADERS += \
     ../trace/inc/sql_trace.h \
     ../trace/inc/trackimages.h \
     ../utilities/inc/util-visual-trace.h \
-    clickablelabel.h \
-        inc/tracetodb.h \
+    inc/clickablelabel.h \
+    inc/tracetodb.h \
 
 FORMS += \
         frm/tracetodb.ui \
