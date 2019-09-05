@@ -152,6 +152,7 @@
     <property name="title">
      <string>Preferences</string>
     </property>
+    <addaction name="actionDB_File"/>
    </widget>
    <addaction name="menuVideo_File"/>
    <addaction name="menuTrack_DB"/>
@@ -193,6 +194,11 @@
    </property>
    <property name="toolTip">
     <string>Select DB File</string>
+   </property>
+  </action>
+  <action name="actionDB_File">
+   <property name="text">
+    <string>DB File</string>
    </property>
   </action>
  </widget>

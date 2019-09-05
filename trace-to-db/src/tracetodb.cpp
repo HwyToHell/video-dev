@@ -62,10 +62,20 @@ TraceToDb::~TraceToDb()
 
 
 void TraceToDb::addMenuPrefs() {
+    ui->menuPreferences->addSeparator()->setText("ROI Size");
+
     QActionGroup *roiGroup = new QActionGroup(this);
-    QAction *aSquare100 = new QAction("100x100");
-    roiGroup->addAction(aSquare100);
-    ui->menuPreferences->addAction(aSquare100);
+
+    QAction *roi100 = new QAction("100x100", roiGroup);
+    roi100->setCheckable(true);
+    connect(roi100, &QAction::triggered, this, &TraceToDb::setRoi100);
+    roi100->setChecked(true);
+
+    QAction *roi200 = new QAction("200x200", roiGroup);
+    roi200->setCheckable(true);
+    connect(roi200, &QAction::triggered, this, &TraceToDb::setRoi200);
+
+    ui->menuPreferences->addActions(roiGroup->actions());
 }
 
 
@@ -143,6 +153,18 @@ void TraceToDb::on_selectVideoFile_triggered()
 void TraceToDb::saveSettings() {
     QSettings settings(m_settingsFile, QSettings::IniFormat);
     settings.setValue( "video_file", m_videoFile );
+}
+
+
+void TraceToDb::setRoi100() {
+    QRect rc(QPoint(0,0), m_roiSizes[RoiType::square100]);
+    ui->video_output_label->setRoi(rc);
+}
+
+
+void TraceToDb::setRoi200() {
+    QRect rc(QPoint(0,0), m_roiSizes[RoiType::square200]);
+    ui->video_output_label->setRoi(rc);
 }
 
 

@@ -29,6 +29,8 @@ public:
 private slots:
     void on_selectVideoFile_triggered();
     void on_runTrackingToDb_triggered();
+    void setRoi100();
+    void setRoi200();
 
 private: // functions
     void addMenuPrefs();

@@ -30,7 +30,7 @@ SqlTrace::SqlTrace(const std::string& dbDirectory, const std::string& dbFile, co
 
     // create table, if not exist
     std::stringstream ss;
-    ss << "create table if not exists " << m_tableName << " (frame int, id int, x int, y int, w int, h int, length int, velocity real);";
+    ss << "create table if not exists " << m_tableName << " (frame int, id int, x int, y int, w int, h int, length int, velocity real, confidence int, occluded int);";
     std::string sqlStmt = ss.str();
     std::string answer;
     if (!queryDbSingle(m_dbHandle, sqlStmt, answer)) {
@@ -77,7 +77,9 @@ bool SqlTrace::insertTrackState(long long frame, const std::list<Track>* trackLi
                << track.getActualEntry().width() << ", "
                << track.getActualEntry().height() << ", "
                << static_cast<int>(track.getLength()) << ", "
-               << track.getVelocity().x << ");";
+               << track.getVelocity().x << ", "
+               << track.getConfidence()<< ", "
+               << track.isOccluded() << ");";
             sqlStmt = ss.str();
             if (!queryDbSingle(m_dbHandle, sqlStmt, answer)) {
                 std::cerr << "__FILE__, __LINE__: sql insertion failed" << std::endl;
