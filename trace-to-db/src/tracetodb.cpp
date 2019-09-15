@@ -12,6 +12,7 @@
 #include <QVariant>
 #include "../../trace/inc/trackimages.h"
 #include "../../trace/inc/sql_trace.h"
+#include "../inc/inspectdialog.h"
 
 
 ClickableLabel* addClickableLabel(Ui::TraceToDb* ui);
@@ -86,6 +87,14 @@ void TraceToDb::loadSettings() {
         m_videoFile = videoFileVariant.toString();
     }
 }
+
+
+void TraceToDb::on_InspectFrameRange_triggered()
+{
+    InspectDialog *inspectDlg = new InspectDialog();
+    inspectDlg->show();
+}
+
 
 
 void TraceToDb::on_runTrackingToDb_triggered()

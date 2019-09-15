@@ -33,6 +33,7 @@ SOURCES += \
     ../trace/src/trackimages.cpp \
     ../utilities/src/util-visual-trace.cpp \
     src/clickablelabel.cpp \
+    src/inspectdialog.cpp \
     src/main.cpp \
     src/tracetodb.cpp \
 
@@ -47,6 +48,7 @@ HEADERS += \
     ../trace/inc/trackimages.h \
     ../utilities/inc/util-visual-trace.h \
     inc/clickablelabel.h \
+    inc/inspectdialog.h \
     inc/tracetodb.h \
 
 FORMS += \

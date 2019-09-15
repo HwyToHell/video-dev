@@ -32,6 +32,8 @@ private slots:
     void setRoi100();
     void setRoi200();
 
+    void on_InspectFrameRange_triggered();
+
 private: // functions
     void addMenuPrefs();
     void loadSettings();

@@ -152,10 +152,17 @@
     <property name="title">
      <string>Preferences</string>
     </property>
-    <addaction name="actionDB_File"/>
+    <addaction name="prefsDbFile"/>
+   </widget>
+   <widget class="QMenu" name="menuInspect">
+    <property name="title">
+     <string>Inspect</string>
+    </property>
+    <addaction name="InspectFrameRange"/>
    </widget>
    <addaction name="menuVideo_File"/>
    <addaction name="menuTrack_DB"/>
+   <addaction name="menuInspect"/>
    <addaction name="menuPreferences"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
@@ -187,6 +194,9 @@
    <property name="text">
     <string>Run Tracking to Db</string>
    </property>
+   <property name="toolTip">
+    <string>Run Tracking to DB</string>
+   </property>
   </action>
   <action name="selectDbFile">
    <property name="text">
@@ -196,9 +206,17 @@
     <string>Select DB File</string>
    </property>
   </action>
-  <action name="actionDB_File">
+  <action name="prefsDbFile">
    <property name="text">
-    <string>DB File</string>
+    <string>DB File Preferences</string>
+   </property>
+  </action>
+  <action name="InspectFrameRange">
+   <property name="text">
+    <string>Frame Range</string>
+   </property>
+   <property name="toolTip">
+    <string>Inspect Frame Range</string>
    </property>
   </action>
  </widget>
